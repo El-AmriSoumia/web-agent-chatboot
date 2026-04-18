@@ -1,0 +1,8 @@
+fastapi==0.112.0
+uvicorn[standard]==0.24.0
+playwright==1.54.0
+google-generativeai==0.8.6
+langchain==1.2.15
+langchain-google-genai==4.2.1
+python-dotenv==1.0.0
+Pillow==12.2.0

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GSAM | PRIVATE INTELLIGENCE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary-fixed-variant": "#574400",
+                        "on-primary-container": "#6b5500",
+                        "surface-tint": "#eac249",
+                        "on-secondary": "#3c2f00",
+                        "inverse-on-surface": "#313030",
+                        "secondary-fixed-dim": "#e9c349",
+                        "surface-bright": "#393939",
+                        "on-primary": "#3d2f00",
+                        "primary-fixed-dim": "#eac249",
+                        "secondary-fixed": "#ffe088",
+                        "tertiary-fixed-dim": "#d0c5af",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#af8d11",
+                        "outline-variant": "#4d4635",
+                        "on-secondary-container": "#342800",
+                        "secondary": "#e9c349",
+                        "on-tertiary": "#363020",
+                        "tertiary-fixed": "#ede1ca",
+                        "on-tertiary-container": "#5e5745",
+                        "tertiary-container": "#d8cdb6",
+                        "background": "#131313",
+                        "tertiary": "#f5e9d2",
+                        "on-surface-variant": "#d0c5af",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-fixed": "#241a00",
+                        "on-error": "#690005",
+                        "surface-dim": "#131313",
+                        "surface-container": "#201f1f",
+                        "inverse-surface": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#4d4635",
+                        "primary-fixed": "#ffe08a",
+                        "surface-container-low": "#1c1b1b",
+                        "error-container": "#93000a",
+                        "outline": "#99907c",
+                        "surface-variant": "#353534",
+                        "on-background": "#e5e2e1",
+                        "surface": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-primary-fixed": "#241a00",
+                        "inverse-primary": "#745b00",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#201b0d",
+                        "surface-container-highest": "#353534",
+                        "primary-container": "#f2ca50",
+                        "primary": "#ffe9b0"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #f2ca50, #d4af37);
+        }
+        .ghost-border {
+            border: 1px solid rgba(77, 70, 53, 0.15);
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4d4635; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface overflow-hidden">
+<!-- BACKGROUND LAYER -->
+<div class="fixed inset-0 z-[-1] pointer-events-none">
+<img alt="high-tech digital security landscape with glowing network circuits and deep obsidian shadows" class="w-full h-full object-cover opacity-30" data-alt="abstract dark server room with glowing yellow circuit lines and data flows reflecting on glass surfaces" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUIM0D8nnGRwv_7GGid6UFv98WwpaiRop_Gtpp67YfqZkBz9sAi4-3BFd0MhBxBlbSXuHqY9mJaO599DJk3_kSMBpP_gMnMiTna-be9IeMdlUvo63hnKy__gXNTheC4550o0JMQvqCdJ9gz5_MnI1EOXhSlgfYdVD1tXzcDDpdXLT7mu4Xj_RLN0pwrYEhk87oONWHhRC_bTQqMCHVfFnEmqUl4zXteVu14wnoRzs2DI3Fcs5X8MyeoJk40Hn9_xz5U3tge0TPrC0"/>
+<div class="absolute inset-0 bg-gradient-to-b from-background/40 via-background to-background"></div>
+</div>
+<div class="flex h-screen w-full overflow-hidden">
+<!-- SIDEBAR (Column 1) -->
+<aside class="hidden lg:flex flex-col sticky top-0 h-screen w-72 bg-[#131313] border-r border-[#4d4635]/15 shadow-2xl shadow-black z-50">
+<div class="p-6 flex items-center gap-3">
+<img alt="Gold geometric intelligence seal" class="w-10 h-10 rounded-lg object-cover" data-alt="minimalist gold geometric seal icon on a black background for a private security firm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUttLmk6EagGdogKciEbYgHzBmvtb--hYwLHbtSEX55UHdmlVH18JyHD5iFHCCxlN6ckgCxrNKIFlml0VbpOB8io-lV32t65FkBp32sNdhgwBTWg7hvKyh6G2VIe2CrpjerVewIuQ_vHsG5nE4u4vaftr8LK2Xqbvb_Mr9X_ALDgObonEMEtEOqlyf07zwHSLTzeBpg27OOVIi8kzaT2K8tpHdXWOxY9-8Y4eMVlER9PfliYW2TbT96DPTakJtE1sFdedk4jpk4Yw"/>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-[#f2ca50]">GSAM</h1>
+<p class="font-['Manrope'] tracking-widest uppercase text-[9px] opacity-60">PRIVATE INTELLIGENCE</p>
+</div>
+</div>
+<div class="px-6 mb-8">
+<button class="w-full gold-gradient text-on-primary font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary-container/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">NEW INQUIRY</span>
+</button>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<!-- Concierge (Active) -->
+<a class="flex items-center gap-4 px-4 py-3 text-[#f2ca50] font-bold border-r-2 border-[#f2ca50] bg-[#1c1b1b]/50 group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="concierge">concierge</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">Concierge</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-[#e5e2e1]/60 hover:text-[#e5e2e1] hover:bg-[#1c1b1b] group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">Archives</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-[#e5e2e1]/60 hover:text-[#e5e2e1] hover:bg-[#1c1b1b] group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">Analytics</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-[#e5e2e1]/60 hover:text-[#e5e2e1] hover:bg-[#1c1b1b] group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">The Vault</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-[#e5e2e1]/60 hover:text-[#e5e2e1] hover:bg-[#1c1b1b] group transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="support_agent">support_agent</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-xs">Live Agent</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-[#4d4635]/15 p-4 space-y-1">
+<a class="flex items-center gap-4 px-4 py-2 text-[#e5e2e1]/60 hover:text-[#e5e2e1] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-[10px]">Account</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-2 text-[#e5e2e1]/60 hover:text-[#e5e2e1] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_center">help_center</span>
+<span class="font-['Manrope'] tracking-widest uppercase text-[10px]">Support</span>
+</a>
+<div class="flex items-center gap-3 mt-4 px-4 py-2 bg-surface-container-lowest rounded-md">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[10px] font-bold">EA</div>
+<div class="flex-1 min-w-0">
+<p class="text-[10px] font-bold truncate">ANALYST_01</p>
+<p class="text-[8px] text-primary/50 tracking-widest">CLEARANCE: ALPHA</p>
+</div>
+<span class="material-symbols-outlined text-sm text-primary/40">security</span>
+</div>
+</div>
+</aside>
+<!-- MAIN WORKSPACE (Column 2) -->
+<main class="flex-1 flex flex-col relative h-screen bg-background/40 overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-6 py-3 w-full bg-[#1c1b1b] border-b border-[#4d4635]/15 backdrop-blur-2xl sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#f2ca50]"></div>
+<span class="font-['Manrope'] uppercase tracking-widest text-[10px] text-[#f2ca50]">Status: Active</span>
+</div>
+<div class="h-4 w-px bg-[#4d4635]/40"></div>
+<span class="font-['Manrope'] uppercase tracking-widest text-[10px] text-[#e5e2e1]">NLP: Encrypted</span>
+</div>
+<h2 class="text-[#f2ca50] font-black tracking-widest text-xs lg:text-sm">GSAM | PRIVATE INTELLIGENCE</h2>
+<div class="flex items-center gap-4">
+<button id="abort-btn" class="px-3 py-1.5 ghost-border text-[#ffb4ab] font-['Manrope'] uppercase tracking-widest text-[9px] hover:bg-error/10 transition-colors">ABORT</button>
+<button class="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span class="material-symbols-outlined text-[18px]">hub</span></button>
+<button class="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span class="material-symbols-outlined text-[18px]">security</span></button>
+<button class="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span class="material-symbols-outlined text-[18px]">settings</span></button>
+</div>
+</header>
+<!-- Chat Canvas -->
+<div id="chat-canvas" class="flex-1 overflow-y-auto px-6 py-8">
+<div class="max-w-5xl mx-auto space-y-8 pb-32">
+<!-- Welcome -->
+<div class="space-y-1">
+<h3 class="text-3xl lg:text-4xl font-bold tracking-tighter">Welcome back, <span class="text-primary">Elias</span>.</h3>
+<p class="text-on-surface-variant text-sm tracking-wide opacity-80 uppercase tracking-widest">Protocol initiated. Agent awaiting vector instructions.</p>
+</div>
+<!-- User Message -->
+<div class="flex justify-end">
+<div class="bg-surface-container-low ghost-border p-4 max-w-[80%] rounded-xl rounded-tr-none">
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-primary-container/20 text-primary text-[9px] px-2 py-0.5 rounded-full font-bold tracking-widest uppercase">CLIENT PRIORITY</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-widest">14:21:05</span>
+</div>
+<p class="text-sm leading-relaxed text-on-surface/90">Conduct a deep-intel sweep on the target domain for active vulnerabilities and open subdomains. Archive findings in the secure vault.</p>
+</div>
+</div>
+<!-- NLP Analysis -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="col-span-1 md:col-span-2 bg-surface-container-lowest ghost-border p-5 rounded-xl">
+<h4 class="text-[10px] text-primary font-bold uppercase tracking-widest mb-4">NLP Analysis Card</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container-highest text-[10px] text-on-surface-variant border border-outline-variant/30 rounded uppercase tracking-widest">Intent: SCAN_RECON</span>
+<span class="px-3 py-1 bg-surface-container-highest text-[10px] text-on-surface-variant border border-outline-variant/30 rounded uppercase tracking-widest">Entity: TARGET_ROOT</span>
+<span class="px-3 py-1 bg-surface-container-highest text-[10px] text-primary border border-primary/20 rounded uppercase tracking-widest">Subtask: VAULT_EXPORT</span>
+</div>
+</div>
+</div>
+<!-- Agent Message -->
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded bg-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary">terminal</span>
+</div>
+<div class="space-y-4 flex-1">
+<div>
+<h4 class="text-[11px] font-bold text-primary uppercase tracking-widest">GSAM INTELLIGENCE</h4>
+<p class="text-sm text-on-surface/90 mt-1">Understood. Initializing reconnaissance sequence. Establishing encrypted browser node.</p>
+</div>
+<!-- Step Tracker -->
+<div id="step-tracker" class="space-y-3 pl-2 border-l border-outline-variant/20 ml-1">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<p class="text-[11px] uppercase tracking-widest text-on-surface/60">Node established [Proxy: CH-01]</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<p class="text-[11px] uppercase tracking-widest text-on-surface/60">Target handshake successful</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary animate-ping mx-1"></div>
+<p class="text-[11px] uppercase tracking-widest text-primary font-bold">Scanning subdomains...</p>
+</div>
+<div class="flex items-center gap-3 opacity-30">
+<div class="w-2 h-2 rounded-full bg-on-surface/40 mx-1"></div>
+<p class="text-[11px] uppercase tracking-widest">Data ingestion and archival</p>
+</div>
+</div>
+<!-- Agent Result Card -->
+<div id="result-card" class="bg-surface-container-high ghost-border p-6 rounded-xl shadow-2xl">
+<div class="flex justify-between items-center mb-6">
+<h4 class="text-[11px] font-bold text-primary uppercase tracking-widest">REAL-TIME TELEMETRY</h4>
+<div class="flex gap-2">
+<button id="export-csv-btn" class="text-[8px] bg-surface-container-lowest border border-outline-variant/30 px-2 py-1 rounded hover:border-primary/50 transition-all">EXPORT CSV</button>
+<button id="export-pdf-btn" class="text-[8px] bg-surface-container-lowest border border-outline-variant/30 px-2 py-1 rounded hover:border-primary/50 transition-all">EXPORT PDF</button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="p-3 bg-background/50 rounded ghost-border">
+<p class="text-[9px] text-on-surface-variant uppercase tracking-widest mb-1">Endpoints</p>
+<p class="text-xl font-bold text-primary">1,242</p>
+</div>
+<div class="p-3 bg-background/50 rounded ghost-border">
+<p class="text-[9px] text-on-surface-variant uppercase tracking-widest mb-1">Vulnerabilities</p>
+<p class="text-xl font-bold text-error">12</p>
+</div>
+<div class="p-3 bg-background/50 rounded ghost-border">
+<p class="text-[9px] text-on-surface-variant uppercase tracking-widest mb-1">Uptime</p>
+<p class="text-xl font-bold text-primary">99.8%</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area Sticky -->
+<div class="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-background via-background/90 to-transparent">
+<div class="max-w-5xl mx-auto space-y-4">
+<!-- Progress Tracker -->
+<div class="flex items-center gap-4">
+<div class="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div id="progress-fill" class="h-full w-[20%] gold-gradient"></div>
+</div>
+<span id="turn-label" class="text-[10px] font-bold text-primary tracking-widest uppercase">TURN 3 / 15</span>
+</div>
+<!-- Input Bar -->
+<div class="bg-surface-container-low/60 backdrop-blur-3xl ghost-border rounded-xl p-2 flex items-center gap-2 shadow-2xl">
+<div class="flex items-center gap-4 pl-4">
+<span class="material-symbols-outlined text-primary/60">terminal</span>
+</div>
+<input id="command-input" class="flex-1 bg-transparent border-none focus:ring-0 text-sm font-['Manrope'] uppercase tracking-widest placeholder:text-on-surface-variant/40" placeholder="AWAITING MISSION PARAMETERS..." type="text"/>
+<div class="flex items-center gap-2 pr-2">
+<button class="p-2 hover:bg-surface-container-highest rounded transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">mic</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">attach_file</span>
+</button>
+<button id="command-btn" class="gold-gradient text-on-primary font-black px-6 py-2.5 rounded-lg flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="font-['Manrope'] text-[10px] tracking-widest uppercase">COMMAND</span>
+<span class="material-symbols-outlined text-sm">bolt</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- LIVE BROWSER PANEL (Column 3) -->
+<aside class="hidden xl:flex flex-col w-96 bg-surface-container-lowest border-l border-[#4d4635]/15 z-40 relative">
+<div class="p-4 border-b border-[#4d4635]/15 flex items-center justify-between bg-surface-container-low">
+<h3 class="text-[10px] font-bold text-primary tracking-widest uppercase">Live Browser Node</h3>
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-error/40"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-on-surface/40"></div>
+</div>
+</div>
+<div class="p-4 bg-background/50 flex items-center gap-2">
+<div class="flex-1 bg-surface-container-highest px-3 py-1.5 rounded ghost-border flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[14px] text-primary">lock</span>
+<span id="live-url" class="text-[10px] text-on-surface/70 truncate tracking-wide">https://nexus-gate.secure/intel/sweep_v4</span>
+</div>
+<button class="p-1.5 hover:bg-surface-container-highest rounded text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+<!-- Browser Viewport -->
+<div class="flex-1 overflow-y-auto bg-surface-container-low/40 relative group">
+<div class="relative m-4 aspect-[9/16] bg-black rounded-lg overflow-hidden border border-outline-variant/20 shadow-2xl">
+<img id="live-screenshot" alt="Dashboard UI screenshot" class="w-full h-full object-cover opacity-60" data-alt="abstract tech UI interface showing data clusters, maps, and futuristic grids in glowing gold and dark charcoal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTbDkQiigt61YgAKnSvk6yq9Thb7Qzwc_jLtGkX4IOhIBW3YoMmOEXfyZDVEh6bXvWz5q8AZAC12LuShwS1ZaloKvv_1-siEzwZdUZnsD6ctdlbTuEvVJPvccyn463J9lXtklr0Pgtb6zDmm9CR_0bQWR1VyGDdKWgp_mOD3sGzjoDfNic2kA0Sn3OvKyeuwGGelDYjIANymW_PXORaO3FZo5GmaL4fEvW3oehXv2rq7_GvsMq__iB84LZNpXjWgDWW644jJEDDZ0"/>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="p-4 bg-black/80 backdrop-blur-xl border border-primary/20 rounded-xl text-center max-w-[80%]">
+<span class="material-symbols-outlined text-primary text-3xl mb-2 animate-pulse">visibility</span>
+<p class="text-[10px] font-bold text-primary uppercase tracking-widest">Active Monitoring</p>
+</div>
+</div>
+<!-- Scanline effect -->
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent h-20 w-full animate-scan pointer-events-none"></div>
+</div>
+<!-- Action Logs -->
+<div class="px-4 pb-8 space-y-3">
+<h5 class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Sequence Log</h5>
+<div id="sequence-log" class="space-y-2">
+<div class="text-[10px] p-2 bg-surface-container-lowest rounded border-l-2 border-primary/40 font-mono">
+<span class="text-primary/60">[14:21:44]</span> NAVIGATING TO ROOT...
+                        </div>
+<div class="text-[10px] p-2 bg-surface-container-lowest rounded border-l-2 border-primary/40 font-mono">
+<span class="text-primary/60">[14:22:01]</span> RESOLVING SSL HANDSHAKE...
+                        </div>
+<div class="text-[10px] p-2 bg-surface-container-lowest rounded border-l-2 border-primary font-mono bg-primary/5">
+<span class="text-primary/60">[14:22:12]</span> EXTRACTING NODE METADATA...
+                        </div>
+<div class="text-[10px] p-2 bg-surface-container-lowest rounded border-l-2 border-on-surface/20 font-mono opacity-50">
+<span class="text-primary/60">[--:--:--]</span> AWAITING NEXT ACTION
+                        </div>
+</div>
+</div>
+</div>
+<!-- Floating Navigation (Bottom Rail Style) -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-container-high p-2 rounded-full shadow-2xl border border-outline-variant/40">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-primary text-on-primary shadow-lg shadow-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">refresh</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</aside>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-16 pb-safe bg-[#131313]/90 backdrop-blur-xl border-t border-[#4d4635]/20 shadow-[0_-10px_30px_rgba(0,0,0,0.8)] lg:hidden z-50">
+<a class="flex flex-col items-center justify-center text-[#f2ca50] pt-1" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-1">Brief</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/40 pt-1" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-1">Intel</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/40 pt-1" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-1">Vault</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/40 pt-1" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span class="font-['Manrope'] text-[8px] uppercase tracking-widest mt-1">Agent</span>
+</a>
+</nav>
+<!-- Success Notification (Toast) -->
+<div class="fixed top-8 right-8 z-[100] translate-x-[150%] transition-transform duration-500 ease-out flex items-center gap-4 bg-surface-container-high border-l-4 border-primary p-5 rounded shadow-2xl max-w-sm" id="toast">
+<div class="p-2 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">task_alt</span>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-widest">MISSION COMPLETE</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Protocol GSAM-9 has finished archival.</p>
+</div>
+</div>
+<style>
+        @keyframes scan {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(400%); }
+        }
+        .animate-scan {
+            animation: scan 4s linear infinite;
+        }
+    </style>
+    <div id="safety-modal" class="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm hidden flex items-center justify-center">
+        <div class="bg-[#2a2a2a] max-w-md w-full mx-4 rounded-xl p-8 border border-[#4d4635]/15 shadow-2xl shadow-black">
+            <div class="text-[#f2ca50] text-5xl text-center mb-4 material-symbols-outlined">gpp_maybe</div>
+            <h3 class="text-[#f2ca50] text-[11px] font-bold uppercase tracking-widest text-center mb-3">ACTION REQUIRES CONFIRMATION</h3>
+            <p id="safety-explanation" class="text-[#e5e2e1]/70 text-sm text-center leading-relaxed mb-8">The agent is about to perform a sensitive action. This cannot be undone. Confirm to proceed.</p>
+            <div class="flex gap-3 justify-center">
+                <button id="safety-abort-btn" class="text-[#ffb4ab] border border-[#ffb4ab]/20 px-6 py-2.5 rounded-lg text-[10px] uppercase tracking-widest font-bold hover:bg-[#ffb4ab]/10 transition-colors">ABORT</button>
+                <button id="safety-confirm-btn" class="gold-gradient text-[#3d2f00] px-6 py-2.5 rounded-lg text-[10px] uppercase tracking-widest font-bold hover:opacity-90 transition-opacity">CONFIRM</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const state = {
+            status: 'idle',
+            currentTurn: 0,
+            maxTurns: 15,
+            steps: [],
+            currentUrl: '',
+            screenshotBase64: null,
+            timerIds: [],
+            resumeLoop: null
+        };
+
+        const MOCK_STEPS = [
+            { name: 'NAVIGATE',        args: 'target domain',     url: 'https://nexus-gate.secure/root' },
+            { name: 'RESOLVE_SSL',     args: 'proxy: CH-01',      url: 'https://nexus-gate.secure/ssl' },
+            { name: 'SCAN_SUBDOMAINS', args: 'depth: 3',          url: 'https://nexus-gate.secure/scan/sub' },
+            { name: 'EXTRACT_NODES',   args: 'filter: active',    url: 'https://nexus-gate.secure/nodes' },
+            { name: 'INDEX_VULNS',     args: 'CVE lookup',        url: 'https://nexus-gate.secure/vulns' },
+            { name: 'VAULT_EXPORT',    args: 'encrypt + archive', url: 'https://nexus-gate.secure/vault/write' }
+        ];
+
+        function render() {
+            const pct = (state.currentTurn / state.maxTurns) * 100;
+            const progressFill = document.getElementById('progress-fill');
+            progressFill.style.width = pct + '%';
+            progressFill.style.transition = 'width 0.6s ease';
+            document.getElementById('turn-label').textContent = 'TURN ' + state.currentTurn + ' / ' + state.maxTurns;
+
+            const abortBtn = document.getElementById('abort-btn');
+            if (state.status === 'executing' || state.status === 'waiting_confirmation') {
+                abortBtn.style.visibility = 'visible';
+            } else {
+                abortBtn.style.visibility = 'hidden';
+            }
+
+            document.getElementById('live-url').textContent = state.currentUrl || 'Awaiting connection...';
+
+            if (state.screenshotBase64) {
+                document.getElementById('live-screenshot').src = state.screenshotBase64;
+            }
+
+            const modal = document.getElementById('safety-modal');
+            if (state.status === 'waiting_confirmation') {
+                modal.style.display = 'flex';
+            } else {
+                modal.style.display = 'none';
+            }
+
+            const tracker = document.getElementById('step-tracker');
+            tracker.innerHTML = '';
+            state.steps.forEach(step => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-3';
+                if (step.status === 'done') {
+                    row.innerHTML = `
+                        <span class="material-symbols-outlined text-[#f2ca50] text-sm" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <p class="text-[11px] uppercase tracking-widest text-[#e5e2e1]/60">${step.name} — ${step.args}</p>`;
+                } else if (step.status === 'running') {
+                    row.innerHTML = `
+                        <div class="w-2 h-2 rounded-full bg-[#f2ca50] animate-ping mx-1 flex-shrink-0"></div>
+                        <p class="text-[11px] uppercase tracking-widest text-[#f2ca50] font-bold">${step.name}...</p>`;
+                } else {
+                    row.innerHTML = `
+                        <div class="w-2 h-2 rounded-full bg-[#e5e2e1]/20 mx-1 flex-shrink-0"></div>
+                        <p class="text-[11px] uppercase tracking-widest text-[#e5e2e1]/25">${step.name}</p>`;
+                }
+                tracker.appendChild(row);
+            });
+        }
+
+        function generateScreenshot(stepName, url) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#111111';
+            ctx.fillRect(0, 0, 400, 600);
+            ctx.fillStyle = '#1c1b1b';
+            ctx.fillRect(0, 0, 400, 36);
+            ctx.fillStyle = '#f2ca50';
+            ctx.fillRect(8, 10, 8, 8);
+            ctx.fillRect(20, 10, 8, 8);
+            ctx.fillRect(32, 10, 8, 8);
+            ctx.fillStyle = '#2a2a2a';
+            ctx.beginPath();
+            ctx.roundRect(60, 8, 280, 20, 4);
+            ctx.fill();
+            ctx.fillStyle = '#666666';
+            ctx.font = '9px monospace';
+            ctx.fillText(url.substring(0, 38), 68, 22);
+            ctx.fillStyle = '#f2ca50';
+            ctx.font = 'bold 14px Manrope, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(stepName, 200, 280);
+            ctx.fillStyle = '#4d4635';
+            ctx.font = '10px monospace';
+            ctx.fillText('GSAM AGENT — ACTIVE SESSION', 200, 300);
+            ctx.strokeStyle = '#1e1e1e';
+            ctx.lineWidth = 1;
+            for (let y = 60; y < 600; y += 30) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(400, y);
+                ctx.stroke();
+            }
+            return canvas.toDataURL('image/png');
+        }
+
+        function appendLog(stepName, status) {
+            const log = document.getElementById('sequence-log');
+            const now = new Date();
+            const time = now.toTimeString().slice(0, 8);
+            const row = document.createElement('div');
+            const isActive = status === 'running';
+            row.className = 'text-[10px] p-2 bg-[#0e0e0e] rounded font-mono ' +
+                (isActive ? 'border-l-2 border-[#f2ca50] bg-[#f2ca50]/5' : 'border-l-2 border-[#f2ca50]/40');
+            row.innerHTML = `<span class="text-[#f2ca50]/60">[${time}]</span> ${stepName}${isActive ? '...' : ' ✓'}`;
+            log.insertBefore(row, log.firstChild);
+            while (log.children.length > 6) log.removeChild(log.lastChild);
+        }
+
+        function detectIntent(text) {
+            const t = text.toLowerCase();
+            if (t.includes('search') || t.includes('find')) return 'SCAN_SEARCH';
+            if (t.includes('fill') || t.includes('form')) return 'FORM_FILL';
+            if (t.includes('extract') || t.includes('scrape')) return 'DATA_EXTRACT';
+            if (t.includes('vault') || t.includes('archive')) return 'VAULT_EXPORT';
+            return 'DEEP_SWEEP';
+        }
+
+        function detectEntity(text) {
+            const match = text.match(/"([^"]+)"/);
+            if (match) return match[1].toUpperCase();
+            const words = text.split(' ');
+            const stopwords = ['the', 'a', 'an', 'on', 'in', 'for', 'to', 'and', 'or', 'with', 'my', 'your'];
+            const noun = words.find(w => w.length > 3 && !stopwords.includes(w.toLowerCase()));
+            return (noun || 'TARGET').toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        }
+
+        function appendUserMessage(text) {
+            const canvas = document.getElementById('chat-canvas');
+            const now = new Date().toTimeString().slice(0, 8);
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            div.innerHTML = `
+                <div class="bg-[#1c1b1b] border border-[#4d4635]/15 p-4 max-w-[80%] rounded-xl rounded-tr-none">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-[#f2ca50]/20 text-[#f2ca50] text-[9px] px-2 py-0.5 rounded-full font-bold tracking-widest uppercase">CLIENT PRIORITY</span>
+                        <span class="text-[9px] text-[#e5e2e1]/50 uppercase tracking-widest">${now}</span>
+                    </div>
+                    <p class="text-sm leading-relaxed text-[#e5e2e1]/90">${text}</p>
+                </div>`;
+            canvas.appendChild(div);
+            canvas.scrollTop = canvas.scrollHeight;
+        }
+
+        function appendNlpCard(text) {
+            const canvas = document.getElementById('chat-canvas');
+            const intent = detectIntent(text);
+            const entity = detectEntity(text);
+            const subtaskMap = {
+                'SCAN_SEARCH': 'DATA_EXTRACT',
+                'FORM_FILL': 'FORM_SUBMIT',
+                'DATA_EXTRACT': 'DATA_EXTRACT',
+                'VAULT_EXPORT': 'VAULT_EXPORT',
+                'DEEP_SWEEP': 'VAULT_EXPORT'
+            };
+            const subtask = subtaskMap[intent];
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+            div.innerHTML = `
+                <div class="col-span-1 md:col-span-2 bg-[#0e0e0e] border border-[#4d4635]/15 p-5 rounded-xl border-l-2 border-l-[#f2ca50]/30">
+                    <h4 class="text-[10px] text-[#f2ca50] font-bold uppercase tracking-widest mb-4">NLP Analysis Card</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-[#2a2a2a] text-[10px] text-[#e5e2e1]/70 border border-[#4d4635]/30 rounded uppercase tracking-widest">Intent: ${intent}</span>
+                        <span class="px-3 py-1 bg-[#2a2a2a] text-[10px] text-[#e5e2e1]/70 border border-[#4d4635]/30 rounded uppercase tracking-widest">Entity: ${entity}</span>
+                        <span class="px-3 py-1 bg-[#2a2a2a] text-[10px] text-[#f2ca50] border border-[#f2ca50]/20 rounded uppercase tracking-widest">Subtask: ${subtask}</span>
+                    </div>
+                </div>`;
+            canvas.appendChild(div);
+            canvas.scrollTop = canvas.scrollHeight;
+        }
+
+        function startAgentLoop() {
+            state.steps = MOCK_STEPS.map(s => ({ ...s, status: 'pending' }));
+            state.status = 'executing';
+            state.currentTurn = 0;
+            state.currentUrl = '';
+            state.screenshotBase64 = null;
+            state.timerIds = [];
+            render();
+
+            function continueStep(index) {
+                if (state.status === 'aborted') return;
+                state.steps[index].status = 'running';
+                state.currentUrl = MOCK_STEPS[index].url;
+                state.screenshotBase64 = generateScreenshot(MOCK_STEPS[index].name, MOCK_STEPS[index].url);
+                render();
+                appendLog(MOCK_STEPS[index].name, 'running');
+                const t = setTimeout(() => {
+                    if (state.status === 'aborted') return;
+                    state.steps[index].status = 'done';
+                    state.currentTurn = index + 1;
+                    render();
+                    appendLog(MOCK_STEPS[index].name, 'done');
+                    const t2 = setTimeout(() => runStep(index + 1), 400);
+                    state.timerIds.push(t2);
+                }, 1200);
+                state.timerIds.push(t);
+            }
+
+            function runStep(index) {
+                if (state.status === 'aborted') return;
+                if (index >= MOCK_STEPS.length) {
+                    state.status = 'complete';
+                    render();
+                    showToast();
+                    return;
+                }
+                if (index === 3 && state.status === 'executing') {
+                    state.status = 'waiting_confirmation';
+                    state.steps[index].status = 'running';
+                    render();
+                    appendLog(MOCK_STEPS[index].name, 'running');
+                    state.resumeLoop = () => continueStep(index);
+                    return;
+                }
+                continueStep(index);
+            }
+
+            runStep(0);
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-x-[150%]');
+            toast.classList.add('translate-x-0');
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-[150%]');
+            }, 5000);
+        }
+
+        function abortAgent() {
+            state.timerIds.forEach(id => clearTimeout(id));
+            state.timerIds = [];
+            state.status = 'aborted';
+            state.resumeLoop = null;
+            render();
+            const canvas = document.getElementById('chat-canvas');
+            const msg = document.createElement('div');
+            msg.className = 'text-center py-4';
+            msg.innerHTML = `<span class="text-[#ffb4ab] text-[11px] uppercase tracking-widest font-bold">⊗ MISSION ABORTED — Agent loop terminated by operator.</span>`;
+            canvas.appendChild(msg);
+            canvas.scrollTop = canvas.scrollHeight;
+        }
+
+        document.getElementById('command-btn').addEventListener('click', () => {
+            const input = document.getElementById('command-input');
+            const text = input.value.trim();
+            if (!text || state.status === 'executing') return;
+            input.value = '';
+            appendUserMessage(text);
+            appendNlpCard(text);
+            state.status = 'executing';
+            state.currentTurn = 0;
+            state.steps = [];
+            state.currentUrl = '';
+            state.screenshotBase64 = null;
+            state.timerIds = [];
+            state.resumeLoop = null;
+            render();
+            setTimeout(() => startAgentLoop(), 600);
+        });
+
+        document.getElementById('command-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('command-btn').click();
+            }
+        });
+
+        document.getElementById('abort-btn').addEventListener('click', abortAgent);
+
+        document.getElementById('safety-abort-btn').addEventListener('click', () => {
+            abortAgent();
+        });
+
+        document.getElementById('safety-confirm-btn').addEventListener('click', () => {
+            if (!state.resumeLoop) return;
+            const resume = state.resumeLoop;
+            state.resumeLoop = null;
+            state.status = 'executing';
+            render();
+            resume();
+        });
+
+        document.getElementById('export-csv-btn').addEventListener('click', () => {
+            const csv = 'Metric,Value\nEndpoints,1242\nVulnerabilities,12\nUptime,99.8%';
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'gsam-report.csv';
+            a.click();
+        });
+
+        document.getElementById('export-pdf-btn').addEventListener('click', () => {
+            window.print();
+        });
+
+        render();
+    </script>
+</body></html>

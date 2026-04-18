@@ -321,60 +321,6 @@ function App() {
       <div className="fixed inset-0 z-[-2] bg-cover bg-center" style={{ backgroundImage: `url(${ASSET_IMAGE}), url(${ASSET_FALLBACK})` }} />
       <div className="fixed inset-0 z-[-1] bg-black/40 pointer-events-none" />
       <div className="flex h-screen w-full overflow-hidden">
-        <aside className="hidden lg:flex flex-col sticky top-0 h-screen w-72 bg-black/30 border-r border-[#4d4635]/15 shadow-2xl shadow-black/40 backdrop-blur-xl z-50">
-          <div className="p-6 flex items-center gap-3">
-            <img
-              alt="GSAM logo"
-              className="w-12 h-12 rounded-lg object-cover"
-              src={ASSET_IMAGE}
-              onError={(e) => { e.currentTarget.src = ASSET_FALLBACK }}
-            />
-            <div>
-              <h1 className="text-xl font-bold tracking-tighter text-[#f2ca50]">GSAM</h1>
-              <p className="font-['Manrope'] tracking-widest uppercase text-[9px] opacity-60">PRIVATE INTELLIGENCE</p>
-            </div>
-          </div>
-          <div className="px-6 mb-8">
-            <button className="w-full bg-gradient-to-r from-[#f2ca50] via-[#eac249] to-[#d4af37] text-[#3d2f00] font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-[#f2ca50]/35 border border-[#f2ca50]/20">
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span className="font-['Manrope'] tracking-widest uppercase text-xs">NEW INQUIRY</span>
-            </button>
-          </div>
-          <nav className="flex-1 px-4 space-y-1">
-            {['Concierge', 'Archives', 'Analytics', 'The Vault', 'Live Agent'].map((item, idx) => {
-              const icon = ['concierge', 'inventory_2', 'monitoring', 'lock', 'support_agent'][idx]
-              const active = idx === 0
-              return (
-                <a
-                  key={item}
-                  className={`flex items-center gap-4 px-4 py-3 ${active ? 'text-[#f2ca50] font-bold border-r-2 border-[#f2ca50] bg-[#1c1b1b]/50' : 'text-[#e5e2e1]/60 hover:text-[#e5e2e1] hover:bg-[#1c1b1b]'} group transition-all duration-300`}
-                  href="#"
-                >
-                  <span className="material-symbols-outlined" data-icon={icon}>{icon}</span>
-                  <span className="font-['Manrope'] tracking-widest uppercase text-xs">{item}</span>
-                </a>
-              )
-            })}
-          </nav>
-          <div className="mt-auto border-t border-[#4d4635]/15 p-4 space-y-1">
-            <a className="flex items-center gap-4 px-4 py-2 text-[#e5e2e1]/60 hover:text-[#e5e2e1] transition-colors" href="#">
-              <span className="material-symbols-outlined" data-icon="account_circle">account_circle</span>
-              <span className="font-['Manrope'] tracking-widest uppercase text-[10px]">Account</span>
-            </a>
-            <a className="flex items-center gap-4 px-4 py-2 text-[#e5e2e1]/60 hover:text-[#e5e2e1] transition-colors" href="#">
-              <span className="material-symbols-outlined" data-icon="help_center">help_center</span>
-              <span className="font-['Manrope'] tracking-widest uppercase text-[10px]">Support</span>
-            </a>
-            <div className="flex items-center gap-3 mt-4 px-4 py-2 bg-surface-container-lowest rounded-md">
-              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[10px] font-bold">EA</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold truncate">ANALYST_01</p>
-                <p className="text-[8px] text-primary/50 tracking-widest">CLEARANCE: ALPHA</p>
-              </div>
-              <span className="material-symbols-outlined text-sm text-primary/40">security</span>
-            </div>
-          </div>
-        </aside>
 
         <main className="flex-1 flex flex-col relative h-screen bg-transparent overflow-hidden">
           {!backendAvailable && (

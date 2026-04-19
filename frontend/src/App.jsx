@@ -29,7 +29,7 @@ function App() {
   const [resultData, setResultData] = useState(null)
   const [backendAvailable, setBackendAvailable] = useState(false)
   const [staleBrowser, setStaleBrowser] = useState(false)
-  const [skipAntiBot, setSkipAntiBot] = useState(false)
+  const [skipAntiBot, setSkipAntiBot] = useState(true)
   const backendControllerRef = useRef(null)
   const chatCanvasRef = useRef(null)
   const timersRef = useRef([])
@@ -343,9 +343,7 @@ function App() {
             </div>
             <div className="flex items-center gap-4">
               <button onClick={handleAbort} className="px-3 py-1.5 ghost-border text-[#ffb4ab] font-['Manrope'] uppercase tracking-widest text-[9px] hover:bg-error/10 transition-colors">ABORT</button>
-              <button className="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span className="material-symbols-outlined text-[18px]">hub</span></button>
-              <button className="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span className="material-symbols-outlined text-[18px]">security</span></button>
-              <button className="text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"><span className="material-symbols-outlined text-[18px]">settings</span></button>
+
             </div>
           </header>
 
@@ -356,17 +354,6 @@ function App() {
                 <p className="text-on-surface-variant text-sm tracking-wide opacity-80 uppercase tracking-widest">Protocol initiated. Agent awaiting vector instructions.</p>
               </div>
 
-              <div className="flex justify-end">
-                <div className="bg-surface-container-low ghost-border p-4 max-w-[80%] rounded-xl rounded-tr-none">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-primary-container/20 text-primary text-[9px] px-2 py-0.5 rounded-full font-bold tracking-widest uppercase">CLIENT PRIORITY</span>
-                    <span className="text-[9px] text-on-surface-variant uppercase tracking-widest">14:21:05</span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-on-surface/90">Conduct a deep-intel sweep on the target domain for active vulnerabilities and open subdomains. Archive findings in the secure vault.</p>
-                </div>
-              </div>
-
-
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded bg-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-on-primary">terminal</span>
@@ -374,7 +361,7 @@ function App() {
                 <div className="space-y-4 flex-1">
                   <div>
                     <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest">GSAM INTELLIGENCE</h4>
-                    <p className="text-sm text-on-surface/90 mt-1">Understood. Initializing reconnaissance sequence. Establishing encrypted browser node.</p>
+                    <p className="text-sm text-on-surface/90 mt-1">Protocol initiated. Awaiting vector instructions.</p>
                   </div>
 
                   <div id="step-tracker" className="space-y-3 pl-2 border-l border-outline-variant/20 ml-1">
@@ -495,28 +482,16 @@ function App() {
         </div>
       </div>
 
-          <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-background via-background/90 to-transparent">
-            <div className="max-w-5xl mx-auto space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-full px-4 py-3 bg-gradient-to-t from-background via-background/95 to-transparent">
+            <div className="max-w-5xl mx-auto space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-0.5 bg-surface-container-highest rounded-full overflow-hidden">
                   <div id="progress-fill" className="h-full gold-gradient" style={{ width: progressWidth, transition: 'width 0.6s ease' }} />
                 </div>
-                <span id="turn-label" className="text-[10px] font-bold text-primary tracking-widest uppercase">TURN {currentTurn} / 15</span>
+                <span id="turn-label" className="text-[9px] font-bold text-primary tracking-widest uppercase shrink-0">TURN {currentTurn} / 15</span>
               </div>
-              <div className="bg-surface-container-low/60 backdrop-blur-3xl ghost-border rounded-xl p-2 flex flex-col gap-3 shadow-2xl">
-                <div className="flex items-center gap-4 pl-4">
-                  <span className="material-symbols-outlined text-primary/60">terminal</span>
-                </div>
-                <div className="flex flex-wrap gap-3 px-4">
-                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-on-surface-variant">
-                    <input type="checkbox" checked={staleBrowser} onChange={(e) => setStaleBrowser(e.target.checked)} className="w-4 h-4 rounded border-outline-variant" />
-                    Stale browser
-                  </label>
-                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-on-surface-variant">
-                    <input type="checkbox" checked={skipAntiBot} onChange={(e) => setSkipAntiBot(e.target.checked)} className="w-4 h-4 rounded border-outline-variant" />
-                    Anti-bot mode
-                  </label>
-                </div>
+              <div className="bg-surface-container-low/80 backdrop-blur-3xl ghost-border rounded-lg shadow-2xl flex items-center gap-2 px-3 py-2">
+                <span className="material-symbols-outlined text-primary/50 text-[18px] shrink-0">terminal</span>
                 <input
                   ref={commandInputRef}
                   id="command-input"
@@ -528,16 +503,18 @@ function App() {
                       handleCommand()
                     }
                   }}
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-['Manrope'] uppercase tracking-widest placeholder:text-on-surface-variant/40"
-                  placeholder="AWAITING MISSION PARAMETERS..."
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-xs font-['Manrope'] tracking-wide placeholder:text-on-surface-variant/40 py-1"
+                  placeholder="Awaiting mission parameters..."
                   type="text"
                 />
-                <div className="flex items-center gap-2 pr-2">
-                  <button id="command-btn" type="button" onClick={handleCommand} className="bg-gradient-to-r from-[#f2ca50] via-[#eac249] to-[#d4af37] text-[#3d2f00] font-black px-6 py-2.5 rounded-lg flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-2xl shadow-[#f2ca50]/35 border border-[#f2ca50]/20">
-                    <span className="font-['Manrope'] text-[10px] tracking-widest uppercase">COMMAND</span>
-                    <span className="material-symbols-outlined text-sm">bolt</span>
-                  </button>
-                </div>
+                <label className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-on-surface-variant shrink-0 cursor-pointer">
+                  <input type="checkbox" checked={staleBrowser} onChange={(e) => setStaleBrowser(e.target.checked)} className="w-3 h-3 rounded border-outline-variant" />
+                  Stale
+                </label>
+                <button id="command-btn" type="button" onClick={handleCommand} className="bg-gradient-to-r from-[#f2ca50] via-[#eac249] to-[#d4af37] text-[#3d2f00] font-black px-4 py-1.5 rounded-md flex items-center gap-1.5 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-[#f2ca50]/25 border border-[#f2ca50]/20 shrink-0">
+                  <span className="font-['Manrope'] text-[9px] tracking-widest uppercase">CMD</span>
+                  <span className="material-symbols-outlined text-xs">bolt</span>
+                </button>
               </div>
             </div>
           </div>
@@ -558,38 +535,24 @@ function App() {
               <span id="live-url" className="text-[10px] text-on-surface/70 truncate tracking-wide">{currentUrl || 'Awaiting connection...'}</span>
             </div>
             <button
-              onClick={() => currentUrl && window.open(currentUrl, '_blank')}
-              className="p-1.5 hover:bg-surface-container-highest rounded text-on-surface-variant transition-colors"
+              onClick={() => window.open(currentUrl || 'about:blank', '_blank')}
+              title={currentUrl ? `Ouvrir ${currentUrl}` : 'Aucune URL active'}
+              className={`p-1.5 rounded transition-all ${currentUrl ? 'text-primary hover:bg-primary/10 cursor-pointer' : 'text-on-surface-variant/30 cursor-not-allowed'}`}
             >
               <span className="material-symbols-outlined text-[18px]">open_in_new</span>
             </button>
           </div>
           <div className="flex-1 overflow-y-auto bg-surface-container-low/40 relative group">
-            <div
-              className="relative m-4 bg-black rounded-lg border border-outline-variant/20 shadow-2xl"
-              style={{
-                resize: 'both',
-                overflow: 'auto',
-                minWidth: '280px',
-                minHeight: '420px',
-                maxWidth: '100%',
-                maxHeight: '80vh'
-              }}
-            >
+            <div className="relative bg-black" style={{ minHeight: '320px' }}>
               {screenshot ? (
-                <img id="live-screenshot" className="w-full h-full object-cover" alt="Capture navigateur" src={screenshot} />
+                <img id="live-screenshot" className="w-full h-auto block" alt="Capture navigateur" src={screenshot} />
               ) : (
-                <div className="flex items-center justify-center h-full text-on-surface-variant text-xs">
-                  En attente du navigateur...
+                <div className="flex flex-col items-center justify-center h-64 text-on-surface-variant text-xs gap-2">
+                  <span className="material-symbols-outlined text-primary/40 text-4xl animate-pulse">display_settings</span>
+                  <span className="uppercase tracking-widest text-[10px]">En attente du navigateur...</span>
                 </div>
               )}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="p-4 bg-black/80 backdrop-blur-xl border border-primary/20 rounded-xl text-center max-w-[80%]">
-                  <span className="material-symbols-outlined text-primary text-3xl mb-2 animate-pulse">visibility</span>
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Active Monitoring</p>
-                </div>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent h-20 w-full animate-scan pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/3 to-transparent h-20 w-full animate-scan pointer-events-none" />
             </div>
             <div className="px-4 pb-8 space-y-3">
               <h5 className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Sequence Log</h5>

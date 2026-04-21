@@ -56,24 +56,6 @@ def _parse_json_safe(text: str) -> dict:
 
 
 async def analyze_task(text: str) -> Dict:
-    prompt = f"""You are a web task analyzer.
-Analyze this task and return only a raw JSON object.
-
-Task: \"{text}\"
-
-Return exactly this structure:
-{{
-  \"intent\": \"SCAN_SEARCH|FORM_FILL|DATA_EXTRACT|VAULT_EXPORT|DEEP_SWEEP\",
-  \"entity\": \"main target name\",
-  \"subtasks\": [\"step 1\", \"step 2\", \"step 3\"]
-}}
-
-Rules:
-- intent must be one of the five values above
-- entity must be specific to the task
-- subtasks must be actionable and task-specific
-- respond with JSON only, no markdown, no explanation
-"""
     if TASK_ANALYSIS_PROMPT and TASK_ANALYSIS_PARSER:
         prompt_text = TASK_ANALYSIS_PROMPT.format(
             task=text,
@@ -81,28 +63,23 @@ Rules:
         )
     else:
         prompt_text = f"""You are a web task analyzer.
-Analyze this task and return only a raw JSON object.
+Analyze this task and return only a raw JSON object that matches the schema below.
 
-Task: \"{text}\"
+Task: "{text}"
 
-Return exactly this structure:
 {{
-  \"intent\": \"SCAN_SEARCH|FORM_FILL|DATA_EXTRACT|VAULT_EXPORT|DEEP_SWEEP\",
-  \"entity\": \"main target name\",
-  \"subtasks\": [\"step 1\", \"step 2\", \"step 3\"]
+  "intent": "SCAN_SEARCH|FORM_FILL|DATA_EXTRACT|VAULT_EXPORT|DEEP_SWEEP",
+  "entity": "main target name",
+  "subtasks": ["step 1", "step 2", "step 3"]
 }}
 
-Rules:
-- intent must be one of the five values above
-- entity must be specific to the task
-- subtasks must be actionable and task-specific
-- respond with JSON only, no markdown, no explanation
+The JSON must be valid and contain exactly the fields defined by the schema.
 """
     try:
         _genai_client = genai_client.Client(api_key=os.getenv('GEMINI_API_KEY'))
         response = await asyncio.to_thread(
             _genai_client.models.generate_content,
-            model='models/gemini-2.0-flash',
+            model='models/gemini-2.5-flash',
             contents=prompt_text
         )
         raw = response.text if hasattr(response, 'text') else str(response)
@@ -119,7 +96,8 @@ Rules:
             except Exception:
                 pass
         return result if result else {}
-    except Exception:
+    except Exception as e:
+        print(f"Gemini API call failed: {type(e).__name__}: {str(e)}")
         pass
 
     lower = text.lower()
@@ -150,15 +128,3 @@ Rules:
         'entity': entity,
         'subtasks': subtasks.get(intent, ['Analyze task', 'Execute', 'Report results'])
     }
-
-
-def detect_intent(text: str) -> str:
-    return 'DEEP_SWEEP'
-
-
-def detect_entity(text: str) -> str:
-    return 'TARGET'
-
-
-def decompose_task(text: str) -> List[str]:
-    return ['Analyzing task...']

@@ -17,6 +17,7 @@ class MCPContext:
         self.action_history: List[Dict[str, Any]] = []
         self.intermediate_results: Dict[str, Any] = {}
         self.error_log: List[Dict[str, Any]] = []
+        self.conversation_memory: List[Dict[str, Any]] = []
 
     def update_state(
         self,
@@ -62,12 +63,37 @@ class MCPContext:
             entry['details'] = details
         self.error_log.append(entry)
 
+    def add_user_feedback(self, message: str) -> None:
+        self.conversation_memory.append({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'type': 'user_feedback',
+            'message': message,
+        })
+
+    def add_agent_thought(self, thought: str) -> None:
+        self.conversation_memory.append({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'type': 'agent_thought',
+            'thought': thought,
+        })
+
+    def add_agent_question(self, question: str) -> None:
+        self.conversation_memory.append({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'type': 'agent_question',
+            'question': question,
+        })
+
+    def get_recent_conversation(self, n: int = 5) -> List[Dict[str, Any]]:
+        return self.conversation_memory[-n:] if self.conversation_memory else []
+
     def get_context_summary(self) -> Dict[str, Any]:
         return {
             'task_state': self.task_state,
             'action_history': self.action_history,
             'intermediate_results': self.intermediate_results,
             'error_log': self.error_log,
+            'conversation_memory': self.conversation_memory,
         }
 
     def to_json(self) -> str:

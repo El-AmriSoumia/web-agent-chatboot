@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import threading
 from typing import Optional
 
 if os.name == 'nt':
@@ -31,11 +32,16 @@ class RunRequest(BaseModel):
     stale_browser: bool = False
     skip_anti_bot: bool = False
 
+class FeedbackRequest(BaseModel):
+    message: str
+
 class AgentState:
     task: Optional[asyncio.Task] = None
     abort_event: Optional[asyncio.Event] = None
     confirm_event: Optional[asyncio.Event] = None
     context: Optional[MCPContext] = None
+    feedback_queue: list = []
+    user_reply_event: Optional[threading.Event] = None
     lock: asyncio.Lock = asyncio.Lock()
 
 state = AgentState()
@@ -74,6 +80,8 @@ async def run(request: Request, body: RunRequest):
             raise HTTPException(status_code=409, detail='Agent is already running')
         state.abort_event = asyncio.Event()
         state.confirm_event = asyncio.Event()
+        state.feedback_queue = []
+        state.user_reply_event = threading.Event()
 
     queue: asyncio.Queue = asyncio.Queue()
 
@@ -98,6 +106,8 @@ async def run(request: Request, body: RunRequest):
                 context_callback=context_callback,
                 stale_browser=body.stale_browser,
                 skip_anti_bot=body.skip_anti_bot,
+                feedback_queue=state.feedback_queue,
+                user_reply_event=state.user_reply_event,
             )
             print("BACKEND: Agent completed successfully")
         except asyncio.CancelledError:
@@ -156,6 +166,7 @@ async def run(request: Request, body: RunRequest):
                 state.abort_event = None
                 state.confirm_event = None
                 state.context = None
+                state.feedback_queue = []  # Reset feedback queue on cleanup
                 print("BACKEND: Stream cleanup done")
 
     print("BACKEND: Returning event stream")
@@ -179,6 +190,15 @@ async def confirm():
             state.confirm_event.set()
             return {'status': 'confirmed'}
     return {'status': 'no_pending_confirmation'}
+
+
+@app.post('/feedback')
+async def feedback(body: FeedbackRequest):
+    async with state.lock:
+        state.feedback_queue.append(body.message)
+        if state.user_reply_event:
+            state.user_reply_event.set()
+    return {'status': 'feedback_queued', 'message': body.message}
 
 
 @app.post('/browser/{action}')

@@ -1,5 +1,7 @@
 import base64
 import io
+import random
+import time
 from typing import Any, Dict, Optional
 from PIL import Image
 
@@ -24,6 +26,23 @@ class RPAController:
         self.mcp_context.add_action(action, details)
         self._send_event({'type': 'step', 'name': action.upper(), 'args': details, 'status': 'running'})
 
+    def _human_type(self, selector: str, text: str) -> None:
+        """Type text character by character with human-like delays."""
+        try:
+            element = self.page.locator(selector).first
+            element.scroll_into_view_if_needed()
+            element.click()
+            element.fill('')  # Clear the field
+            for char in text:
+                self.page.keyboard.type(char)
+                time.sleep(random.randint(40, 120) / 1000.0)
+        except Exception as e:
+            # Fallback to direct fill if human typing fails
+            try:
+                self.page.fill(selector, text)
+            except Exception:
+                raise e
+
     def navigate(self, url: str) -> str:
         self._log_action('navigate', {'url': url})
         try:
@@ -42,19 +61,25 @@ class RPAController:
     def click(self, selector: str) -> str:
         self._log_action('click', {'selector': selector})
         try:
-            self.page.click(selector, timeout=5000)
+            element = self.page.locator(selector).first
+            element.scroll_into_view_if_needed()
+            element.click(timeout=5000)
             self._send_event({'type': 'log', 'message': f'Clicked selector {selector}'})
             self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
             return f'Clicked {selector}'
         except Exception:
             try:
-                self.page.get_by_text(selector, exact=False).first.click(timeout=5000)
+                element = self.page.get_by_text(selector, exact=False).first
+                element.scroll_into_view_if_needed()
+                element.click(timeout=5000)
                 self._send_event({'type': 'log', 'message': f'Clicked text {selector}'})
                 self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
                 return f'Clicked text {selector}'
             except Exception:
                 try:
-                    self.page.get_by_role('button', name=selector).click(timeout=5000)
+                    element = self.page.get_by_role('button', name=selector)
+                    element.scroll_into_view_if_needed()
+                    element.click(timeout=5000)
                     self._send_event({'type': 'log', 'message': f'Clicked role button {selector}'})
                     self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
                     return f'Clicked role button {selector}'
@@ -66,43 +91,35 @@ class RPAController:
 
     def type_text(self, selector: str, text: str) -> str:
         self._log_action('type', {'selector': selector, 'text': text})
-        typed = False
         try:
-            self.page.click(selector, timeout=5000)
-            self.page.fill(selector, text)
+            self._human_type(selector, text)
             self.page.keyboard.press('Enter')
             self.page.wait_for_load_state('domcontentloaded', timeout=8000)
-            typed = True
             self._send_event({'type': 'log', 'message': f'Typed text into {selector}'})
             self._send_event({'type': 'step', 'name': 'TYPE', 'args': f'{selector} | {text}', 'status': 'done'})
             return f'Typed into {selector}'
-        except Exception:
-            for attempt in [
-                lambda: self.page.get_by_placeholder(selector).fill(text),
-                lambda: self.page.locator('[name="q"]:visible').first.fill(text),
-                lambda: self.page.locator('input[type="search"]:visible').first.fill(text),
-                lambda: self.page.locator('input[type="text"]:visible').first.fill(text),
-                lambda: self.page.locator('textarea:visible').first.fill(text),
-            ]:
-                try:
-                    attempt()
-                    typed = True
-                    break
-                except Exception:
-                    continue
-            if not typed:
-                message = f'Type failed on "{selector}"'
-                self.mcp_context.add_error(message, {'selector': selector, 'text': text})
-                self._send_event({'type': 'error', 'message': message})
-                return message
-            try:
-                self.page.keyboard.press('Enter')
-                self.page.wait_for_load_state('domcontentloaded', timeout=8000)
-            except Exception:
-                pass
-            self._send_event({'type': 'log', 'message': f'Typed fallback text into {selector}'})
-            self._send_event({'type': 'step', 'name': 'TYPE', 'args': f'{selector} | {text}', 'status': 'done'})
-            return f'Typed fallback into {selector}'
+        except Exception as exc:
+            message = f'Type failed on "{selector}": {exc}'
+            self.mcp_context.add_error(message, {'selector': selector, 'text': text})
+            self._send_event({'type': 'error', 'message': message})
+            return message
+
+    def fill_form(self, fields: list) -> str:
+        self._log_action('fill_form', {'fields': fields})
+        try:
+            for field in fields:
+                selector = field.get('selector', '')
+                value = field.get('value', '')
+                self._human_type(selector, value)
+                time.sleep(random.uniform(0.3, 0.7))  # Pause between fields
+            self._send_event({'type': 'log', 'message': f'Filled form with {len(fields)} fields'})
+            self._send_event({'type': 'step', 'name': 'FILL_FORM', 'args': f'{len(fields)} fields', 'status': 'done'})
+            return f'Filled form with {len(fields)} fields'
+        except Exception as exc:
+            message = f'Fill form failed: {exc}'
+            self.mcp_context.add_error(message, {'fields': fields})
+            self._send_event({'type': 'error', 'message': message})
+            return message
 
     def scroll(self, amount: int = 600) -> str:
         self._log_action('scroll', {'amount': amount})

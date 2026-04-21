@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import random
 import re
 import time
 from typing import Any, Callable, Dict, List, Optional
@@ -70,7 +71,7 @@ if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 
 DEFAULT_GEMINI_MODELS = [
-    'models/gemini-2.0-flash',
+    'models/gemini-2.5-flash',
 ]
 
 def _normalize_gemini_model_name(model_name: str) -> str:
@@ -104,7 +105,7 @@ def _create_gemini_model(model_name: str):
 
 def _create_langchain_gemini_model():
     return ChatGoogleGenerativeAI(
-        model='gemini-2.0-flash',
+        model='gemini-2.5-flash',
         api_key=GEMINI_API_KEY,
         temperature=0.15,
         max_tokens=1024,
@@ -170,16 +171,26 @@ def _build_langchain_tools(rpa: RPAController, loop: asyncio.AbstractEventLoop, 
 
 def _format_react_prompt(task: str, page_url: str, page_text: str, iteration: int, context: Dict[str, Any]) -> str:
     summary_json = json.dumps(context, ensure_ascii=False)
-    return f"""You are GSAM, a precise web navigation AI agent.
-Your current task: {task}
-Iteration: {iteration}/10
-Current URL: {page_url}
-
-Current page text preview:
-{page_text or '(empty page)'}
-
-Persistent context:
-{summary_json}
+    
+    conversation_memory = context.get('conversation_memory', [])
+    recent_history = ""
+    if conversation_memory:
+        recent = conversation_memory[-5:]  # Last 5 turns
+        recent_history = "\n".join([f"- {item.get('type', 'unknown')}: {item.get('message', item.get('question', 'N/A'))}" for item in recent])
+    
+    user_correction = ""
+    if conversation_memory:
+        corrections = [item for item in conversation_memory if item.get('type') == 'user_feedback']
+        if corrections:
+            user_correction = f"⚠️ {corrections[-1].get('message', '')}"
+    
+    return f"""# GSAM — Web Navigation Agent
+## TASK: {task}
+## CURRENT STATE: iteration {iteration}, url: {page_url}, page content: {page_text[:1000]}...
+## RECENT ACTIONS: last 3 from MCP history
+## CONVERSATION HISTORY: {recent_history or 'None'}
+## USER CORRECTION (if any): {user_correction}
+## AVAILABLE TOOLS: navigate, click, type, fill_form, scroll, extract, ask_user, done
 
 You have the following tools available:
 - navigate(url)
@@ -190,6 +201,9 @@ You have the following tools available:
 - screenshot()
 
 Choose exactly one tool call to make next. Return only the tool invocation in JSON format or a single JSON object with action and parameters. Do not add any explanation or markdown.
+
+Persistent context:
+{summary_json}
 """
 
 
@@ -218,6 +232,49 @@ def _to_base64_png(image_bytes: bytes) -> str:
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
+def _human_type(page, selector: str, text: str) -> None:
+    """Type text character by character with human-like delays."""
+    try:
+        element = page.locator(selector).first
+        element.scroll_into_view_if_needed()
+        element.click()
+        element.fill('')  # Clear the field
+        for char in text:
+            page.keyboard.type(char)
+            time.sleep(random.randint(40, 120) / 1000.0)
+    except Exception as e:
+        # Fallback to direct fill if human typing fails
+        try:
+            page.fill(selector, text)
+        except Exception:
+            raise e
+
+
+def _fill_form_field(page, selector: str, value: str) -> None:
+    """Fill a form field using multiple strategies."""
+    strategies = [
+        lambda: page.locator(selector).first,
+        lambda: page.get_by_placeholder(selector),
+        lambda: page.get_by_label(selector),
+        lambda: page.locator('input[type="text"]:visible').first,
+        lambda: page.locator('input[type="email"]:visible').first,
+        lambda: page.locator('input[type="password"]:visible').first,
+        lambda: page.locator('textarea:visible').first,
+    ]
+    
+    for strategy in strategies:
+        try:
+            element = strategy()
+            element.scroll_into_view_if_needed()
+            element.click()
+            element.fill('')  # Clear first
+            _human_type(page, selector, value)
+            return
+        except Exception:
+            continue
+    raise Exception(f"Could not fill form field with selector: {selector}")
+
+
 def _get_page_text(page, max_chars: int = 3000) -> str:
     try:
         text = page.evaluate("""() => {
@@ -239,6 +296,35 @@ def _get_page_text(page, max_chars: int = 3000) -> str:
         return ''
 
 
+def _get_form_fields(page) -> List[Dict[str, str]]:
+    """Extract visible form fields with their labels, placeholders and selectors."""
+    try:
+        return page.evaluate("""() => {
+            const fields = [];
+            const inputs = document.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=reset]):not([type=button]), textarea, select');
+            inputs.forEach((el, i) => {
+                const id = el.id || el.name || '';
+                let label = '';
+                if (id) {
+                    const lbl = document.querySelector(`label[for='${id}']`);
+                    if (lbl) label = lbl.textContent.trim();
+                }
+                if (!label) {
+                    const parent = el.closest('label');
+                    if (parent) label = parent.textContent.trim();
+                }
+                if (!label) label = el.getAttribute('aria-label') || '';
+                const placeholder = el.getAttribute('placeholder') || '';
+                const type = el.getAttribute('type') || el.tagName.toLowerCase();
+                const selector = el.name ? `[name='${el.name}']` : (el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${i+1})`);
+                fields.push({ label: label || placeholder || type, placeholder, type, selector });
+            });
+            return fields;
+        }""")
+    except Exception:
+        return []
+
+
 def _parse_json(text: str) -> Dict[str, Any]:
     match = re.search(r'{.*}', text, re.S)
     if not match:
@@ -256,6 +342,8 @@ class BrowserAction(BaseModel):
     text: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
     summary: Optional[str] = None
+    fields: Optional[List[Dict[str, str]]] = None
+    submit_selector: Optional[str] = None
 
 
 ACTION_PARSER = None
@@ -395,34 +483,45 @@ def _apply_anti_bot_page_settings(page) -> None:
         pass
 
 
-def _format_action_prompt(task: str, page_url: str, page_text: str, iteration: int) -> str:
-    return f"""You are GSAM, a precise web navigation AI agent controlling a real browser.
+def _format_action_prompt(task: str, page_url: str, page_text: str, iteration: int, conversation_history: List[Dict] = None, form_fields: List[Dict] = None) -> str:
+    recent_history = ""
+    if conversation_history:
+        recent = conversation_history[-5:]
+        recent_history = "\n".join([f"- {item.get('type', 'unknown')}: {item.get('message', item.get('question', 'N/A'))}" for item in recent])
 
-TASK: {task}
-ITERATION: {iteration}/10
-CURRENT URL: {page_url}
+    user_correction = ""
+    if conversation_history:
+        corrections = [item for item in conversation_history if item.get('type') == 'user_feedback']
+        if corrections:
+            user_correction = f"⚠️ {corrections[-1].get('message', '')}"
 
-PAGE TEXT (first 2000 chars):
-{page_text or '(empty page)'}
+    fields_section = ""
+    if form_fields:
+        lines = [f"  - label='{f['label']}' placeholder='{f['placeholder']}' type='{f['type']}' selector='{f['selector']}'" for f in form_fields]
+        fields_section = "## FORM FIELDS DETECTED ON PAGE:\n" + "\n".join(lines) + "\n"
 
-STRICT RULES:
-- If you are on google.com and have NOT searched yet: type in the search box
-  selector for Google search input: input[name='q']
-- After typing in Google, ALWAYS follow with a navigate action using the full search URL
-  Example: {{"action":"navigate","url":"https://www.google.com/search?q=your+query"}}
-- If you see search results: click on the most relevant result link
-- If you are on the target page and have found the answer: extract the data
-- If the task is fully complete: use done action with a clear summary
-- NEVER repeat the same action twice in a row
-- NEVER stay on google.com for more than 2 iterations without navigating away
-- NEVER return empty or null — always return a valid JSON action
+    return f"""# GSAM — Web Navigation Agent
+## TASK: {task}
+## CURRENT STATE: iteration {iteration}, url: {page_url}
+## PAGE CONTENT: {page_text[:800]}...
+## CONVERSATION HISTORY: {recent_history or 'None'}
+## USER CORRECTION (if any): {user_correction}
+{fields_section}## RULES:
+- If FORM FIELDS are detected above: use ask_user with a question that lists EACH field by its label and asks the user to provide the value for each one. Example: "Please provide values for: Name, Email, Phone"
+- If NO form fields and on google.com: use ask_user to ask what to search
+- After user provides values: use fill_form with those exact values
+- If task fully complete: use done
+- NEVER return empty/null — always return valid JSON
+## RESPOND NOW: only JSON
 
-AVAILABLE ACTIONS — respond with ONLY one raw JSON object, no markdown, no explanation:
+AVAILABLE ACTIONS:
 {{"action":"navigate","url":"https://..."}}
-{{"action":"type","selector":"CSS_SELECTOR","text":"text to type"}}
 {{"action":"click","selector":"CSS_SELECTOR_OR_TEXT"}}
+{{"action":"type","selector":"CSS_SELECTOR","text":"text to type"}}
+{{"action":"fill_form","fields":[{{"selector":"...","value":"..."}}],"submit_selector":"..."}}
 {{"action":"scroll","direction":"down"}}
 {{"action":"extract","data":{{"field":"value found"}}}}
+{{"action":"ask_user","question":"Please provide values for the following fields: FIELD1, FIELD2, ..."}}
 {{"action":"done","summary":"what was accomplished"}}
 
 RESPOND NOW WITH ONLY THE JSON:"""
@@ -451,7 +550,7 @@ def _ask_gemini_sync(screenshot_base64: str, prompt: str) -> Dict[str, Any]:
             image_b64_jpeg = base64.b64encode(buffer.getvalue()).decode('utf-8')
 
             model = ChatGoogleGenerativeAI(
-                model='gemini-2.0-flash',
+                model='gemini-2.5-flash',
                 api_key=GEMINI_API_KEY,
                 temperature=0.1,
                 max_tokens=512,
@@ -604,6 +703,8 @@ def _run_playwright_sync(
     start_url: str = 'https://www.google.com',
     stale_browser: bool = False,
     skip_anti_bot: bool = False,
+    feedback_queue: Optional[List[str]] = None,
+    user_reply_event: Optional[Any] = None,
 ) -> None:
     def _run_legacy_loop(page):
         # Fallback behavior using the existing native model loop when LangChain is unavailable.
@@ -612,6 +713,8 @@ def _run_playwright_sync(
         screenshot_base64 = _to_base64_png(screenshot_bytes)
         _send_event_sync(loop, send_event, {'type': 'screenshot', 'data': screenshot_base64})
         _send_event_sync(loop, send_event, {'type': 'url', 'value': url})
+
+        conversation_history: List[Dict] = []
 
         def _is_google_search_page(url: str) -> bool:
             return 'google.com/search' in url or 'bing.com/search' in url
@@ -643,11 +746,11 @@ def _run_playwright_sync(
                 pass
             return False
 
-        for iteration in range(10):
+        for iteration in range(20):
             _send_event_sync(loop, send_event, {
                 'type': 'iteration',
                 'current': iteration + 1,
-                'total': 10
+                'total': 20
             })
 
             if abort_event and abort_event.is_set():
@@ -670,22 +773,104 @@ def _run_playwright_sync(
             screenshot_bytes = page.screenshot(full_page=False)
             screenshot_base64 = _to_base64_png(screenshot_bytes)
             page_text = _get_page_text(page, max_chars=2000)
+            form_fields = _get_form_fields(page)
             _send_event_sync(loop, send_event, {'type': 'screenshot', 'data': screenshot_base64})
 
             if abort_event and abort_event.is_set():
                 _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Abort detected after screenshot.'})
                 return
 
-            _send_event_sync(loop, send_event, {
-                'type': 'thinking',
-                'message': f'Analyzing screenshot and page state — iteration {iteration + 1}/10.'
-            })
+            # --- Direct form detection: skip LLM, ask user immediately with real field names ---
+            already_asked = any(
+                item.get('type') == 'agent_question' for item in conversation_history
+            )
+            has_user_answer = any(
+                item.get('type') == 'user_feedback' for item in conversation_history
+            )
+            if form_fields and not has_user_answer:
+                labels = [f['label'] for f in form_fields if f.get('label')]
+                question = 'Please provide values for: ' + ', '.join(labels)
+                conversation_history.append({'type': 'agent_question', 'question': question})
+                _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
+                if user_reply_event:
+                    user_reply_event.clear()
+                deadline = time.time() + 300
+                while time.time() < deadline:
+                    if abort_event and abort_event.is_set():
+                        return
+                    if feedback_queue:
+                        user_feedback = feedback_queue.pop(0)
+                        conversation_history.append({'type': 'user_feedback', 'message': user_feedback})
+                        _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
+                        break
+                    time.sleep(0.3)
+                continue  # next iteration will fill the form with the answer
 
+            # --- If user already answered, fill the form directly ---
+            if form_fields and has_user_answer:
+                last_answer = next(
+                    (item['message'] for item in reversed(conversation_history) if item.get('type') == 'user_feedback'),
+                    ''
+                )
+                # Parse "Label: value, Label2: value2" format
+                fill_fields = []
+                for field in form_fields:
+                    label = field['label']
+                    selector = field['selector']
+                    # Try to find value for this label in the answer
+                    pattern = re.search(rf'{re.escape(label)}[:\s]+([^,]+)', last_answer, re.IGNORECASE)
+                    value = pattern.group(1).strip() if pattern else ''
+                    if value:
+                        fill_fields.append({'selector': selector, 'value': value})
+                if fill_fields:
+                    _send_event_sync(loop, send_event, {'type': 'step', 'name': 'FILL_FORM', 'args': str(fill_fields), 'status': 'running'})
+                    for f in fill_fields:
+                        try:
+                            _fill_form_field(page, f['selector'], f['value'])
+                            time.sleep(0.3)
+                        except Exception as fe:
+                            _send_event_sync(loop, send_event, {'type': 'log', 'message': f'Fill error {f["selector"]}: {fe}'})
+                    _send_event_sync(loop, send_event, {'type': 'step', 'name': 'FILL_FORM', 'args': 'done', 'status': 'done'})
+                    # Submit
+                    try:
+                        page.click('input[type=submit], button[type=submit]', timeout=5000)
+                        page.wait_for_load_state('domcontentloaded', timeout=8000)
+                    except Exception:
+                        pass
+                    # Show result with submitted values
+                    result_data = {f['selector'].strip("[name=']").replace("']", ''): f['value'] for f in fill_fields}
+                    result_data['status'] = 'Form submitted successfully'
+                    _send_event_sync(loop, send_event, {'type': 'result', 'data': result_data})
+                    _send_event_sync(loop, send_event, {'type': 'step', 'name': 'SUBMIT', 'args': 'Form submitted', 'status': 'done'})
+                    # Ask what to do next
+                    next_q = 'Formulaire soumis avec succès. Que voulez-vous faire ensuite ? (ex: soumettre un autre formulaire, naviguer vers une autre page, terminer)'
+                    conversation_history.append({'type': 'agent_question', 'question': next_q})
+                    _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
+                    if user_reply_event:
+                        user_reply_event.clear()
+                    deadline = time.time() + 300
+                    while time.time() < deadline:
+                        if abort_event and abort_event.is_set():
+                            return
+                        if feedback_queue:
+                            user_feedback = feedback_queue.pop(0)
+                            conversation_history.append({'type': 'user_feedback', 'message': user_feedback})
+                            # Reset so next iteration uses LLM with user instruction
+                            has_user_answer = False
+                            break
+                        time.sleep(0.3)
+                    else:
+                        return  # timeout — end session
+                    continue
+            # --- No form: use LLM ---
+            _send_event_sync(loop, send_event, {'type': 'thinking', 'message': f'Analyzing page — iteration {iteration + 1}/20.'})
             system_prompt = _format_action_prompt(
                 task=task,
                 page_url=page.url,
                 page_text=page_text,
-                iteration=iteration + 1
+                iteration=iteration + 1,
+                conversation_history=conversation_history,
+                form_fields=form_fields
             )
 
             if PROVIDER == 'claude' and ANTHROPIC_API_KEY:
@@ -815,50 +1000,53 @@ def _run_playwright_sync(
                     selector = action.get('selector', '')
                     text = action.get('text') or ''
                     try:
-                        page.click(selector, timeout=5000)
-                        page.fill(selector, text)
+                        _human_type(page, selector, text)
                         page.keyboard.press('Enter')
                         page.wait_for_load_state('domcontentloaded', timeout=8000)
-                    except Exception:
-                        typed = False
-                        try:
-                            page.get_by_placeholder(selector).fill(text)
-                            typed = True
-                        except Exception:
-                            pass
-                        if not typed:
-                            try:
-                                page.locator('[name="q"]:visible').first.fill(text)
-                                typed = True
-                            except Exception:
-                                pass
-                        if not typed:
-                            try:
-                                page.locator('input[type="search"]:visible').first.fill(text)
-                                typed = True
-                            except Exception:
-                                pass
-                        if not typed:
-                            try:
-                                page.locator('input[type="text"]:visible').first.fill(text)
-                                typed = True
-                            except Exception:
-                                pass
-                        if not typed:
-                            try:
-                                page.locator('textarea:visible').first.fill(text)
-                                typed = True
-                            except Exception as type_err:
-                                _send_event_sync(loop, send_event, {
-                                    'type': 'log',
-                                    'message': f'Type failed on "{selector}": {type_err}'
-                                })
-                        if typed:
-                            try:
-                                page.keyboard.press('Enter')
-                                page.wait_for_load_state('domcontentloaded', timeout=8000)
-                            except Exception:
-                                pass
+                    except Exception as type_err:
+                        _send_event_sync(loop, send_event, {
+                            'type': 'log',
+                            'message': f'Type failed on "{selector}": {type_err}'
+                        })
+                elif name == 'fill_form':
+                    fields = action.get('fields', [])
+                    submit_selector = action.get('submit_selector', '')
+                    try:
+                        for field in fields:
+                            selector = field.get('selector', '')
+                            value = field.get('value', '')
+                            _fill_form_field(page, selector, value)
+                            time.sleep(random.uniform(0.3, 0.7))  # Pause between fields
+                        if submit_selector:
+                            page.click(submit_selector, timeout=5000)
+                            page.wait_for_load_state('domcontentloaded', timeout=8000)
+                    except Exception as form_err:
+                        _send_event_sync(loop, send_event, {
+                            'type': 'log',
+                            'message': f'Fill form failed: {form_err}'
+                        })
+                elif name == 'ask_user':
+                    question = action.get('question', '')
+                    conversation_history.append({"type": "agent_question", "question": question})
+                    _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
+                    # Block until user replies — unblocked by /feedback endpoint via user_reply_event
+                    if user_reply_event:
+                        user_reply_event.clear()
+                    deadline = time.time() + 300
+                    while time.time() < deadline:
+                        if abort_event and abort_event.is_set():
+                            return
+                        if feedback_queue:
+                            user_feedback = feedback_queue.pop(0)
+                            conversation_history.append({"type": "user_feedback", "message": user_feedback})
+                            _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
+                            break
+                        if user_reply_event and user_reply_event.is_set() and feedback_queue:
+                            break
+                        time.sleep(0.3)
+                    else:
+                        _send_event_sync(loop, send_event, {'type': 'log', 'message': 'ask_user timeout — continuing.'})
+                    continue
                 elif name == 'scroll':
                     page.evaluate('window.scrollBy(0, 600)')
                 elif name == 'extract':
@@ -876,7 +1064,7 @@ def _run_playwright_sync(
                 return
 
             _send_event_sync(loop, send_event, {'type': 'step', 'name': name_upper, 'args': args, 'status': 'done'})
-            time.sleep(4)
+            time.sleep(random.uniform(1.5, 3.0))
 
         title = page.title()
         _send_event_sync(loop, send_event, {'type': 'result', 'data': {'page_title': title}})
@@ -919,6 +1107,8 @@ def _run_playwright_sync(
                     _run_legacy_loop(page)
                     return
 
+                conversation_history: List[Dict] = []
+
                 for iteration in range(10):
                     mcp_context.update_state(current_url=page.url, iteration=iteration + 1, status='running')
                     _send_event_sync(loop, send_event, {
@@ -926,6 +1116,13 @@ def _run_playwright_sync(
                         'current': iteration + 1,
                         'total': 10
                     })
+
+                    # Check for user feedback
+                    if feedback_queue:
+                        while feedback_queue:
+                            user_feedback = feedback_queue.pop(0)
+                            conversation_history.append({"type": "user_feedback", "message": user_feedback})
+                            _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User feedback: {user_feedback}'})
 
                     if abort_event and abort_event.is_set():
                         _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Abort requested during execution.'})
@@ -985,7 +1182,7 @@ def _run_playwright_sync(
                     _send_event_sync(loop, send_event, {'type': 'step', 'name': name.upper() if name else 'UNKNOWN', 'args': args, 'status': 'running'})
                     mcp_context.add_action(name or 'unknown', {'args': args})
 
-                    time.sleep(4)
+                    time.sleep(random.uniform(1.5, 3.0))
 
                 title = page.title()
                 _send_event_sync(loop, send_event, {'type': 'result', 'data': {'page_title': title}})
@@ -1045,6 +1242,8 @@ async def run_agent(
     stale_browser: bool = False,
     skip_anti_bot: bool = False,
     context_callback: Optional[Callable[[MCPContext], None]] = None,
+    feedback_queue: Optional[List[str]] = None,
+    user_reply_event: Optional[Any] = None,
 ) -> MCPContext:
     nlp_result = await analyze_task(task)
     intent = nlp_result.get('intent', 'DEEP_SWEEP')
@@ -1082,6 +1281,8 @@ async def run_agent(
             start_url,
             stale_browser,
             skip_anti_bot,
+            feedback_queue,
+            user_reply_event,
         )
     except Exception as exc:
         await send_event({'type': 'error', 'message': str(exc)})

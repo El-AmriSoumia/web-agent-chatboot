@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 node_modules/
+
+
+
+# Playwright (IMPORTANT)
+.playwright_profile/
+
+ 

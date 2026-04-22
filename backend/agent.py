@@ -210,14 +210,10 @@ You have the following tools available:
 - screenshot()
 
 RULES:
-- Review the CONVERSATION HISTORY only to understand context and avoid repeating actions.
-- Do NOT continue a previous search, open a result, navigate to another page, or start a new related search unless the user explicitly asks for that next step.
-- If the current page is a search-results page and the user's request was only to search/find/recherche, do NOT click any result automatically. Use ask_user to ask what they want to open or do next on this page.
-- If there are unfinished tasks or follow-ups from previous conversations, continue them only when the user explicitly confirms they still want that.
+- Review the CONVERSATION HISTORY to find relations between the current task and previous questions/searches. Continue related research accordingly.
+- If there are unfinished tasks or follow-ups from previous conversations, prioritize completing them.
 - Do not click on select elements or dropdowns unless specifically needed.
-- If form fields are detected, fill only the ones relevant to the task.
-- If a search bar is present, type the query and submit.
-- Only use ask_user if a mandatory field needed for the task is missing, such as a password or a specific filter explicitly requested by the user.
+- If you need user input for forms, use ask_user.
 - Avoid repetitive actions.
 - RELEVANCE CHECK BEFORE done: Before using the done action, verify that the extracted or found data actually answers the user's task. If the page content is empty, off-topic, or does not match the task intent, do NOT use done — use ask_user to explain what was found and ask for clarification.
 - EMPTY OR IRRELEVANT RESULTS: If after a search or data extraction the results are empty, unrelated to the task, or clearly wrong, do NOT invent a continuation or retry the same action. Immediately use ask_user to explain what happened and ask the user how to proceed.
@@ -339,9 +335,8 @@ def _get_form_fields(page) -> List[Dict[str, str]]:
                 if (!label) label = el.getAttribute('aria-label') || '';
                 const placeholder = el.getAttribute('placeholder') || '';
                 const type = el.getAttribute('type') || el.tagName.toLowerCase();
-                const required = el.required || el.getAttribute('aria-required') === 'true';
                 const selector = el.name ? `[name='${el.name}']` : (el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${i+1})`);
-                fields.push({ label: label || placeholder || type, placeholder, type, selector, required });
+                fields.push({ label: label || placeholder || type, placeholder, type, selector });
             });
             return fields;
         }""")
@@ -487,46 +482,6 @@ def _create_google_search_url(task: str) -> str:
     return f'https://www.google.com/search?q={quote_plus(query)}'
 
 
-def _field_text(field: Dict[str, Any]) -> str:
-    return " ".join(
-        str(field.get(key, '') or '')
-        for key in ('label', 'placeholder', 'type', 'selector')
-    ).lower()
-
-
-def _is_search_field(field: Dict[str, Any]) -> bool:
-    text = _field_text(field)
-    search_keywords = ('search', 'recherche', 'chercher', 'query', 'keyword', 'lookup')
-    return field.get('type') == 'search' or any(keyword in text for keyword in search_keywords)
-
-
-def _is_required_field(field: Dict[str, Any]) -> bool:
-    text = _field_text(field)
-    if field.get('required'):
-        return True
-    return field.get('type') == 'password' or 'password' in text or 'mot de passe' in text
-
-
-def _task_mentions_field(task: str, field: Dict[str, Any]) -> bool:
-    task_lower = task.lower()
-    candidates = [field.get('label', ''), field.get('placeholder', '')]
-    for candidate in candidates:
-        words = re.findall(r'[a-zA-Z0-9]+', candidate.lower())
-        significant = [word for word in words if len(word) >= 4]
-        if significant and all(word in task_lower for word in significant[:2]):
-            return True
-        if any(word in task_lower for word in significant):
-            return True
-    return False
-
-
-def _relevant_required_fields(task: str, form_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return [
-        field for field in form_fields
-        if _is_required_field(field) and (_task_mentions_field(task, field) or field.get('type') == 'password')
-    ]
-
-
 def _build_playwright_args(skip_anti_bot: bool) -> List[str]:
     args = ['--no-sandbox']
     if skip_anti_bot:
@@ -645,15 +600,11 @@ def _format_action_prompt(task: str, page_url: str, page_text: str, iteration: i
 ## CONVERSATION HISTORY: {recent_history or 'None'}
 ## USER CORRECTION (if any): {user_correction}
 {fields_section}## RULES:
-*** CRITICAL: NEVER invent, guess, or hallucinate values for any form field. ***
-- If FORM FIELDS are detected, fill only the fields relevant to the task.
-- If a search bar is present, type the query from the task and submit it.
-- Only use ask_user if a mandatory field needed for the task is missing, such as a password or a specific filter explicitly requested by the user.
-- If user already provided values, use only those exact values. Never substitute your own.
-- If you cannot match a mandatory relevant field to the user's answer, use ask_user for that specific missing field only.
+*** CRITICAL: NEVER invent, guess, or hallucinate values for any form field. If the user has not explicitly provided a value, use ask_user. ***
+- If FORM FIELDS are detected AND user has NOT provided values in CONVERSATION HISTORY: use ask_user listing all field labels.
+- If FORM FIELDS are detected AND user already provided values: use fill_form with exactly those user-provided values. Never substitute your own.
+- If you cannot match a field label to the user's answer: use ask_user for that specific missing field. Do NOT fill it with fake data.
 - If you are stuck or uncertain: use ask_user to ask the user for guidance instead of retrying the same action.
-- Use the conversation history only as context. Do NOT continue previous related research automatically.
-- If the current page is a search-results page and the user's request was only to search/find/recherche, stop on that page and use ask_user. Do NOT click a result, do NOT open another page, and do NOT launch another search unless the user explicitly asks.
 - Do not click on select elements or dropdowns unless specifically needed for the task.
 - For login forms, ask for credentials — never invent them.
 - If CAPTCHA is detected: use ask_user.
@@ -685,89 +636,6 @@ def _send_event_sync(loop: asyncio.AbstractEventLoop, send_event, data: dict) ->
         future.result(timeout=10)
     except (RuntimeError, TimeoutError, OSError):
         pass
-
-
-FOLLOW_UP_QUESTION = "Est-ce que je dois faire quelque chose maintenant ?"
-STOP_COMMANDS = {'stop', 'quit', 'arrête', 'arrete', 'non', 'quitter', 'fin', 'exit'}
-CONTINUE_COMMANDS = {'continue', 'continuer', 'ok', 'oui', 'yes', 'go'}
-NEW_CONVERSATION_COMMANDS = {
-    'nouvelle conversation',
-    'nouveau sujet',
-    'new conversation',
-    'new topic',
-    'reset conversation',
-    'reset chat',
-}
-
-
-def _normalize_history_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
-    normalized = dict(entry)
-    entry_type = normalized.get('type')
-    role = normalized.get('role')
-    message = normalized.get('message')
-    question = normalized.get('question')
-    content = normalized.get('content')
-
-    if not entry_type:
-        if role == 'user':
-            entry_type = 'user_feedback'
-        elif role == 'agent':
-            entry_type = 'agent_message'
-        else:
-            entry_type = role or 'unknown'
-        normalized['type'] = entry_type
-
-    if message is None and content is not None:
-        normalized['message'] = content
-    if question is None and content is not None and entry_type == 'agent_question':
-        normalized['question'] = content
-
-    return normalized
-
-
-def _load_conversation_history(limit: int = 100) -> List[Dict[str, Any]]:
-    return [_normalize_history_entry(item) for item in get_conversation_history(limit)]
-
-
-def _persist_history_entry(conversation_history: List[Dict[str, Any]], entry: Dict[str, Any], task: str) -> None:
-    normalized = _normalize_history_entry(entry)
-    conversation_history.append(normalized)
-    role = normalized.get('role')
-    if not role:
-        if normalized.get('type') == 'user_feedback':
-            role = 'user'
-        else:
-            role = 'agent'
-    msg = normalized.get('message') or normalized.get('question') or normalized.get('content') or ''
-    append_conversation(role, msg, task=task)
-
-
-def _has_user_feedback(conversation_history: List[Dict[str, Any]]) -> bool:
-    return any(item.get('type') == 'user_feedback' for item in conversation_history)
-
-
-def _last_user_feedback(conversation_history: List[Dict[str, Any]]) -> str:
-    return next(
-        (item.get('message', '') for item in reversed(conversation_history) if item.get('type') == 'user_feedback'),
-        ''
-    )
-
-
-def _matches_command(user_feedback: str, commands: set[str]) -> bool:
-    value = user_feedback.strip().lower()
-    return any(command in value for command in commands)
-
-
-def _is_stop_command(user_feedback: str) -> bool:
-    return _matches_command(user_feedback, STOP_COMMANDS)
-
-
-def _is_continue_command(user_feedback: str) -> bool:
-    return user_feedback.strip().lower() in CONTINUE_COMMANDS
-
-
-def _is_new_conversation_command(user_feedback: str) -> bool:
-    return _matches_command(user_feedback, NEW_CONVERSATION_COMMANDS)
 
 
 def _ask_gemini_sync(screenshot_base64: str, prompt: str) -> Dict[str, Any]:
@@ -953,7 +821,7 @@ def _run_playwright_sync(
         _send_event_sync(loop, send_event, {'type': 'url', 'value': url})
 
         # Load full persistent history so agent remembers all previous conversations
-        conversation_history: List[Dict] = _load_conversation_history(100)
+        conversation_history: List[Dict] = list(get_conversation_history(100))  # Last 100 messages
         memory_ctx = get_memory_context(task)
 
         # --- Stuck-loop detection state ---
@@ -961,7 +829,10 @@ def _run_playwright_sync(
 
         def _persist(entry: Dict) -> None:
             """Append to RAM + disk simultaneously."""
-            _persist_history_entry(conversation_history, entry, task)
+            conversation_history.append(entry)
+            role = entry.get('type', 'agent')
+            msg = entry.get('message') or entry.get('question') or ''
+            append_conversation(role, msg, task=task)
 
         _DIRECT_ACTION_RE = re.compile(
             r'^(click|clique|cliquer|appuie|appuyer|press|tap|scroll|scrolle|'
@@ -976,6 +847,23 @@ def _run_playwright_sync(
 
         def _is_google_search_page(url: str) -> bool:
             return 'google.com/search' in url or 'bing.com/search' in url
+
+        def _click_first_search_result(page) -> bool:
+            try:
+                if page.locator('a h3').count() > 0:
+                    page.locator('a h3').first.click(timeout=8000)
+                    page.wait_for_load_state('domcontentloaded', timeout=10000)
+                    return True
+            except Exception:
+                pass
+            try:
+                if page.locator('div#search a h3').count() > 0:
+                    page.locator('div#search a h3').first.click(timeout=8000)
+                    page.wait_for_load_state('domcontentloaded', timeout=10000)
+                    return True
+            except Exception:
+                pass
+            return False
 
         def _force_google_query(task: str, page) -> bool:
             if _is_direct_action(task):
@@ -999,6 +887,13 @@ def _run_playwright_sync(
             if abort_event and abort_event.is_set():
                 _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Abort requested during execution.'})
                 return
+
+            if _is_google_search_page(page.url):
+                if _click_first_search_result(page):
+                    _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Auto-clicked first search result.'})
+                    _send_event_sync(loop, send_event, {'type': 'url', 'value': page.url})
+                    _send_event_sync(loop, send_event, {'type': 'step', 'name': 'NAVIGATE', 'args': 'first search result', 'status': 'done'})
+                    continue
 
             if _force_google_query(task, page):
                 _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Auto-navigated to Google search results.'})
@@ -1047,7 +942,6 @@ def _run_playwright_sync(
                 return
 
             # --- Handle CAPTCHA first ---
-            has_user_answer = _has_user_feedback(conversation_history)
             if has_captcha and not has_user_answer:
                 question = 'CAPTCHA detected. Please solve the CAPTCHA and provide the verification code.'
                 _persist({'type': 'agent_question', 'question': question})
@@ -1066,50 +960,41 @@ def _run_playwright_sync(
                     time.sleep(0.3)
                 continue  # next iteration will handle after CAPTCHA
 
-            # --- Direct form handling: use search bars automatically, ask only for missing required fields ---
-            has_user_answer = _has_user_feedback(conversation_history)
+            # --- Direct form detection: skip LLM, ask user immediately with real field names ---
+            already_asked = any(
+                item.get('type') == 'agent_question' for item in conversation_history
+            )
+            has_user_answer = any(
+                item.get('type') == 'user_feedback' for item in conversation_history
+            )
             if form_fields and not has_user_answer:
-                search_field = next((f for f in form_fields if _is_search_field(f)), None)
-                search_query = _extract_search_query(task).strip()
-                if search_field and search_query:
-                    try:
-                        _send_event_sync(loop, send_event, {'type': 'step', 'name': 'TYPE', 'args': f"{search_field['selector']} | {search_query}", 'status': 'running'})
-                        _human_type(page, search_field['selector'], search_query)
-                        page.keyboard.press('Enter')
-                        page.wait_for_load_state('domcontentloaded', timeout=8000)
-                        _send_event_sync(loop, send_event, {'type': 'step', 'name': 'TYPE', 'args': f"{search_field['selector']} | {search_query}", 'status': 'done'})
-                        continue
-                    except Exception as exc:
-                        _send_event_sync(loop, send_event, {'type': 'log', 'message': f'Search submit failed: {exc}'})
-
-                required_fields = _relevant_required_fields(task, form_fields)
-                if required_fields:
-                    labels = [f['label'] for f in required_fields if f.get('label')]
-                    question = 'Please provide values for: ' + ', '.join(labels)
-                    _persist({'type': 'agent_question', 'question': question})
-                    _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
-                    if user_reply_event:
-                        user_reply_event.clear()
-                    deadline = time.time() + 300
-                    while time.time() < deadline:
-                        if abort_event and abort_event.is_set():
-                            return
-                        if feedback_queue:
-                            user_feedback = feedback_queue.pop(0)
-                            _persist({'type': 'user_feedback', 'message': user_feedback})
-                            _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
-                            break
-                        time.sleep(0.3)
-                    continue  # next iteration will fill the relevant required fields
+                labels = [f['label'] for f in form_fields if f.get('label')]
+                question = 'Please provide values for: ' + ', '.join(labels)
+                _persist({'type': 'agent_question', 'question': question})
+                _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
+                if user_reply_event:
+                    user_reply_event.clear()
+                deadline = time.time() + 300
+                while time.time() < deadline:
+                    if abort_event and abort_event.is_set():
+                        return
+                    if feedback_queue:
+                        user_feedback = feedback_queue.pop(0)
+                        _persist({'type': 'user_feedback', 'message': user_feedback})
+                        _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
+                        break
+                    time.sleep(0.3)
+                continue  # next iteration will fill the form with the answer
 
             # --- If user already answered, fill the form directly ---
             if form_fields and has_user_answer:
-                last_answer = _last_user_feedback(conversation_history)
+                last_answer = next(
+                    (item['message'] for item in reversed(conversation_history) if item.get('type') == 'user_feedback'),
+                    ''
+                )
                 fill_fields = []
                 missing_labels = []
                 for field in form_fields:
-                    if not (_is_required_field(field) or _task_mentions_field(task, field)):
-                        continue
                     label = field['label']
                     selector = field['selector']
                     pattern = re.search(rf'{re.escape(label)}[:\s]+([^,\n]+)', last_answer, re.IGNORECASE)
@@ -1119,7 +1004,7 @@ def _run_playwright_sync(
                         value = last_answer.strip()
                     if value:
                         fill_fields.append({'selector': selector, 'value': value})
-                    elif _is_required_field(field):
+                    else:
                         missing_labels.append(label)
 
                 # NEVER hallucinate — if any field is missing, ask the user
@@ -1161,7 +1046,7 @@ def _run_playwright_sync(
                     _send_event_sync(loop, send_event, {'type': 'result', 'data': result_data})
                     _send_event_sync(loop, send_event, {'type': 'step', 'name': 'SUBMIT', 'args': 'Form submitted', 'status': 'done'})
                     save_session(task, 'FORM_FILL', str(result_data), status='done')
-                    next_q = FOLLOW_UP_QUESTION
+                    next_q = 'Form submitted. What do you want to do next?'
                     _persist({'type': 'agent_question', 'question': next_q})
                     _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
                     if user_reply_event:
@@ -1178,16 +1063,6 @@ def _run_playwright_sync(
                         time.sleep(0.3)
                     else:
                         return
-                    if _is_stop_command(user_feedback):
-                        save_session(task, 'USER_STOP', user_feedback, status='done')
-                        return
-                    if _is_new_conversation_command(user_feedback):
-                        archive_and_reset()
-                        _send_event_sync(loop, send_event, {'type': 'done'})
-                        return
-                    if not _is_continue_command(user_feedback):
-                        task = user_feedback.strip()
-                        append_conversation('user', task, task=task)
                     continue
             # --- No form: use LLM ---
             _send_event_sync(loop, send_event, {'type': 'thinking', 'message': f'Analyzing page — iteration {iteration + 1}/20.'})
@@ -1381,7 +1256,7 @@ def _run_playwright_sync(
                     _send_event_sync(loop, send_event, {'type': 'result', 'data': action.get('data', {})})
                     _send_event_sync(loop, send_event, {'type': 'step', 'name': name_upper, 'args': args, 'status': 'done'})
                     save_session(task, 'DATA_EXTRACT', str(action.get('data', {})), status='done')
-                    next_q = FOLLOW_UP_QUESTION
+                    next_q = 'Données extraites. Que souhaitez-vous faire ensuite ?'
                     _persist({'type': 'agent_question', 'question': next_q})
                     _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
                     if user_reply_event:
@@ -1398,11 +1273,7 @@ def _run_playwright_sync(
                         time.sleep(0.3)
                     else:
                         return
-                    if _is_stop_command(user_feedback):
-                        return
-                    if _is_new_conversation_command(user_feedback):
-                        archive_and_reset()
-                        _send_event_sync(loop, send_event, {'type': 'done'})
+                    if any(w in user_feedback.lower() for w in ('stop', 'quit', 'arrête', 'non', 'quitter', 'fin', 'exit')):
                         return
                     task = user_feedback.strip()
                     append_conversation('user', task, task=task)
@@ -1410,7 +1281,7 @@ def _run_playwright_sync(
                 elif name == 'done':
                     _send_event_sync(loop, send_event, {'type': 'step', 'name': name_upper, 'args': args, 'status': 'done'})
                     save_session(task, 'DONE', args, status='done')
-                    next_q = FOLLOW_UP_QUESTION
+                    next_q = 'Tâche terminée. Que souhaitez-vous que je fasse ensuite ?'
                     _persist({'type': 'agent_question', 'question': next_q})
                     _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
                     if user_reply_event:
@@ -1427,11 +1298,7 @@ def _run_playwright_sync(
                         time.sleep(0.3)
                     else:
                         return
-                    if _is_stop_command(user_feedback):
-                        return
-                    if _is_new_conversation_command(user_feedback):
-                        archive_and_reset()
-                        _send_event_sync(loop, send_event, {'type': 'done'})
+                    if any(w in user_feedback.lower() for w in ('stop', 'quit', 'arrête', 'non', 'quitter', 'fin', 'exit')):
                         return
                     task = user_feedback.strip()
                     append_conversation('user', task, task=task)
@@ -1447,7 +1314,7 @@ def _run_playwright_sync(
 
             # --- Ask user after every meaningful action ---
             if name in ('navigate', 'click', 'type', 'fill_form'):
-                next_q = f'Action {name_upper} effectuée. {FOLLOW_UP_QUESTION} (dites "continue" pour continuer, "stop" pour quitter, ou "nouveau sujet" pour repartir à zéro)'
+                next_q = f'Action {name_upper} effectuée. Que souhaitez-vous faire ensuite ? (dites "continue" pour que je continue automatiquement, ou donnez une nouvelle instruction)'
                 _persist({'type': 'agent_question', 'question': next_q})
                 _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
                 if user_reply_event:
@@ -1465,15 +1332,11 @@ def _run_playwright_sync(
                 else:
                     return
                 # If user says stop/quit/non, end session
-                if _is_stop_command(user_feedback):
+                if any(w in user_feedback.lower() for w in ('stop', 'quit', 'arrête', 'non', 'quitter', 'fin', 'exit')):
                     save_session(task, 'USER_STOP', user_feedback, status='done')
                     return
-                if _is_new_conversation_command(user_feedback):
-                    archive_and_reset()
-                    _send_event_sync(loop, send_event, {'type': 'done'})
-                    return
                 # New instruction becomes the new task, with full history as context
-                if not _is_continue_command(user_feedback):
+                if user_feedback.strip().lower() not in ('continue', 'continuer', 'ok', 'oui', 'yes', 'go'):
                     task = user_feedback.strip()
                     append_conversation('user', task, task=task)
                     _send_event_sync(loop, send_event, {'type': 'log', 'message': f'New task: {task}'})
@@ -1523,10 +1386,13 @@ def _run_playwright_sync(
                     _run_legacy_loop(page)
                     return
 
-                conversation_history: List[Dict] = _load_conversation_history(100)
+                conversation_history: List[Dict] = list(get_conversation_history(100))
 
                 def _persist_lc(entry: Dict) -> None:
-                    _persist_history_entry(conversation_history, entry, task)
+                    conversation_history.append(entry)
+                    role = entry.get('type', 'agent')
+                    msg = entry.get('message') or entry.get('question') or ''
+                    append_conversation(role, msg, task=task)
 
                 # --- Stuck-loop detection state (LangChain loop) ---
                 _lc_last_state: Dict[str, Any] = {'url': None, 'text_hash': None, 'count': 0}
@@ -1590,7 +1456,7 @@ def _run_playwright_sync(
                         continue
 
                     # --- Handle CAPTCHA first ---
-                    if has_captcha and not _has_user_feedback(conversation_history):
+                    if has_captcha and not any(item.get('type') == 'user_feedback' for item in conversation_history):
                         question = 'CAPTCHA detected. Please solve the CAPTCHA and provide the verification code.'
                         _persist_lc({'type': 'agent_question', 'question': question})
                         _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
@@ -1609,72 +1475,39 @@ def _run_playwright_sync(
                         continue  # next iteration
 
                     # --- Handle forms ---
-                    has_user_answer = _has_user_feedback(conversation_history)
+                    has_user_answer = any(item.get('type') == 'user_feedback' for item in conversation_history)
                     if form_fields and not has_user_answer:
-                        search_field = next((f for f in form_fields if _is_search_field(f)), None)
-                        search_query = _extract_search_query(task).strip()
-                        if search_field and search_query:
-                            try:
-                                _send_event_sync(loop, send_event, {'type': 'step', 'name': 'TYPE', 'args': f"{search_field['selector']} | {search_query}", 'status': 'running'})
-                                _human_type(page, search_field['selector'], search_query)
-                                page.keyboard.press('Enter')
-                                page.wait_for_load_state('domcontentloaded', timeout=8000)
-                                _send_event_sync(loop, send_event, {'type': 'step', 'name': 'TYPE', 'args': f"{search_field['selector']} | {search_query}", 'status': 'done'})
-                                continue
-                            except Exception as exc:
-                                _send_event_sync(loop, send_event, {'type': 'log', 'message': f'Search submit failed: {exc}'})
-
-                        required_fields = _relevant_required_fields(task, form_fields)
-                        if required_fields:
-                            labels = [f['label'] for f in required_fields if f.get('label')]
-                            question = 'Please provide values for: ' + ', '.join(labels)
-                            _persist_lc({'type': 'agent_question', 'question': question})
-                            _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
-                            if user_reply_event:
-                                user_reply_event.clear()
-                            deadline = time.time() + 300
-                            while time.time() < deadline:
-                                if abort_event and abort_event.is_set():
-                                    return
-                                if feedback_queue:
-                                    user_feedback = feedback_queue.pop(0)
-                                    _persist_lc({'type': 'user_feedback', 'message': user_feedback})
-                                    _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
-                                    break
-                                time.sleep(0.3)
-                            continue  # next iteration will fill
+                        labels = [f['label'] for f in form_fields if f.get('label')]
+                        question = 'Please provide values for: ' + ', '.join(labels)
+                        _persist_lc({'type': 'agent_question', 'question': question})
+                        _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
+                        if user_reply_event:
+                            user_reply_event.clear()
+                        deadline = time.time() + 300
+                        while time.time() < deadline:
+                            if abort_event and abort_event.is_set():
+                                return
+                            if feedback_queue:
+                                user_feedback = feedback_queue.pop(0)
+                                _persist_lc({'type': 'user_feedback', 'message': user_feedback})
+                                _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
+                                break
+                            time.sleep(0.3)
+                        continue  # next iteration will fill
 
                     if form_fields and has_user_answer:
-                        last_answer = _last_user_feedback(conversation_history)
+                        last_answer = next(
+                            (item['message'] for item in reversed(conversation_history) if item.get('type') == 'user_feedback'),
+                            ''
+                        )
                         fill_fields = []
-                        missing_labels = []
                         for field in form_fields:
-                            if not (_is_required_field(field) or _task_mentions_field(task, field)):
-                                continue
                             label = field['label']
                             selector = field['selector']
                             pattern = re.search(rf'{re.escape(label)}[:\s]+([^,]+)', last_answer, re.IGNORECASE)
                             value = pattern.group(1).strip() if pattern else ''
                             if value:
                                 fill_fields.append({'selector': selector, 'value': value})
-                            elif _is_required_field(field):
-                                missing_labels.append(label)
-                        if missing_labels:
-                            question = 'Please provide values for: ' + ', '.join(missing_labels)
-                            _persist_lc({'type': 'agent_question', 'question': question})
-                            _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
-                            if user_reply_event:
-                                user_reply_event.clear()
-                            deadline = time.time() + 300
-                            while time.time() < deadline:
-                                if abort_event and abort_event.is_set():
-                                    return
-                                if feedback_queue:
-                                    user_feedback = feedback_queue.pop(0)
-                                    _persist_lc({'type': 'user_feedback', 'message': user_feedback})
-                                    break
-                                time.sleep(0.3)
-                            continue
                         if fill_fields:
                             _send_event_sync(loop, send_event, {'type': 'step', 'name': 'FILL_FORM', 'args': str(fill_fields), 'status': 'running'})
                             for f in fill_fields:
@@ -1694,7 +1527,7 @@ def _run_playwright_sync(
                             _send_event_sync(loop, send_event, {'type': 'result', 'data': result_data})
                             _send_event_sync(loop, send_event, {'type': 'step', 'name': 'SUBMIT', 'args': 'Form submitted', 'status': 'done'})
                             save_session(task, 'FORM_FILL', str(result_data), status='done')
-                            next_q = FOLLOW_UP_QUESTION
+                            next_q = 'Form submitted. What do you want to do next?'
                             _persist_lc({'type': 'agent_question', 'question': next_q})
                             _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
                             if user_reply_event:
@@ -1711,16 +1544,6 @@ def _run_playwright_sync(
                                 time.sleep(0.3)
                             else:
                                 return
-                            if _is_stop_command(user_feedback):
-                                save_session(task, 'USER_STOP', user_feedback, status='done')
-                                return
-                            if _is_new_conversation_command(user_feedback):
-                                archive_and_reset()
-                                _send_event_sync(loop, send_event, {'type': 'done'})
-                                return
-                            if not _is_continue_command(user_feedback):
-                                task = user_feedback.strip()
-                                append_conversation('user', task, task=task)
                             continue
 
                     prompt = _format_react_prompt(
@@ -1752,7 +1575,7 @@ def _run_playwright_sync(
                         return
                     if action.get('action') == 'done':
                         save_session(task, 'DONE', action.get('summary', ''), status='done')
-                        next_q = FOLLOW_UP_QUESTION
+                        next_q = 'Tâche terminée. Que souhaitez-vous que je fasse ensuite ?'
                         _persist_lc({'type': 'agent_question', 'question': next_q})
                         _send_event_sync(loop, send_event, {'type': 'step', 'name': 'DONE', 'args': action.get('summary', ''), 'status': 'done'})
                         _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': next_q})
@@ -1770,16 +1593,6 @@ def _run_playwright_sync(
                             time.sleep(0.3)
                         else:
                             return
-                        if _is_stop_command(user_feedback):
-                            save_session(task, 'USER_STOP', user_feedback, status='done')
-                            return
-                        if _is_new_conversation_command(user_feedback):
-                            archive_and_reset()
-                            _send_event_sync(loop, send_event, {'type': 'done'})
-                            return
-                        if not _is_continue_command(user_feedback):
-                            task = user_feedback.strip()
-                            append_conversation('user', task, task=task)
                         continue
 
                     name = action.get('action')

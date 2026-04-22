@@ -151,7 +151,7 @@ def get_memory_context(current_task: str, n_sessions: int = 5, n_conv: int = 15)
 
     lines.append('RULES FROM MEMORY:')
     lines.append('- Do NOT repeat actions or searches already completed above.')
-    lines.append('- If the current task continues a previous one, pick up where it left off.')
+    lines.append('- If the current task seems related to a previous one, ask the user for confirmation before continuing it.')
     lines.append('- If a past error is listed, use a different approach this time.')
     lines.append('=== END CONTEXT INSTRUCTION ===')
     return '\n'.join(lines)

@@ -138,6 +138,7 @@ export default function App() {
   const scrollRef = useRef(null)
   const cmdRef = useRef(null)
   const controllerRef = useRef(null)
+  const streamActiveRef = useRef(false)
 
   // probe backend
   useEffect(() => {
@@ -197,7 +198,8 @@ export default function App() {
         setAgentStatus('error')
         break
       case 'done':
-        setAgentStatus('complete')
+        // Ne pas écraser 'waiting' — le ask_user post-done doit rester visible
+        setAgentStatus(prev => prev === 'waiting' ? 'waiting' : 'complete')
         break
       default:
         break
@@ -212,6 +214,18 @@ export default function App() {
   }
 
   const startAgent = async (task) => {
+    // If stream already open, just send as feedback (continuing same session)
+    if (streamActiveRef.current) {
+      addMsg({ type: 'user', text: task, time: new Date().toTimeString().slice(0, 8) })
+      setAgentStatus('executing')
+      await fetch(`${backendUrl}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: task })
+      }).catch(() => {})
+      return
+    }
+
     setMessages([])
     setCurrentUrl('')
     setLastScreenshot(null)
@@ -219,6 +233,7 @@ export default function App() {
     addMsg({ type: 'user', text: task, time: new Date().toTimeString().slice(0, 8) })
 
     controllerRef.current = new AbortController()
+    streamActiveRef.current = true
     try {
       const res = await fetch(`${backendUrl}/run`, {
         method: 'POST',
@@ -244,12 +259,17 @@ export default function App() {
         addMsg({ type: 'action', name: 'CONNECTION ERROR', args: err.message, status: 'error' })
         setAgentStatus('error')
       }
+    } finally {
+      streamActiveRef.current = false
     }
   }
 
   const handleCommand = () => {
-    if (!command.trim() || agentStatus === 'executing' || agentStatus === 'waiting') return
+    if (!command.trim()) return
     if (!backendAvailable) return
+    // Allow new instructions while stream is active (routes as feedback)
+    if (agentStatus === 'executing' && !streamActiveRef.current) return
+    if (agentStatus === 'waiting') return
     startAgent(command.trim())
     setCommand('')
   }
@@ -265,15 +285,32 @@ export default function App() {
       body: JSON.stringify({ message: answer })
     }).catch(() => {})
   }
-
   const handleConfirm = async () => {
     setShowSafety(false)
     setAgentStatus('executing')
     await fetch(`${backendUrl}/confirm`, { method: 'POST' }).catch(() => {})
   }
 
+  const handleReset = async () => {
+    controllerRef.current?.abort()
+    streamActiveRef.current = false
+    await fetch(`${backendUrl}/reset`, { method: 'POST' }).catch(() => {})
+    setMessages([])
+    setCurrentUrl('')
+    setLastScreenshot(null)
+    setShowFeedback(false)
+    setShowSafety(false)
+    setAgentStatus('idle')
+    setCommand('')
+  }
+
+  const handleNewConversation = async () => {
+    await handleReset()
+  }
+
   const handleAbort = async () => {
     controllerRef.current?.abort()
+    streamActiveRef.current = false
     await fetch(`${backendUrl}/abort`, { method: 'POST' }).catch(() => {})
     setShowFeedback(false)
     setShowSafety(false)
@@ -299,9 +336,14 @@ export default function App() {
             </span>
           </div>
           <h1 className="text-[#f2ca50] font-black tracking-widest text-sm">GSAM | PRIVATE INTELLIGENCE</h1>
-          <button onClick={handleAbort} className="text-[9px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 px-3 py-1.5 rounded hover:bg-[#ffb4ab]/10">
-            ABORT
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleReset} className="text-[9px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/20 px-3 py-1.5 rounded hover:bg-[#4ade80]/10">
+              NOUVEAU SUJET
+            </button>
+            <button onClick={handleAbort} className="text-[9px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 px-3 py-1.5 rounded hover:bg-[#ffb4ab]/10">
+              ABORT
+            </button>
+          </div>
         </header>
 
         {!backendAvailable && (
@@ -330,15 +372,19 @@ export default function App() {
               value={command}
               onChange={e => setCommand(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCommand() } }}
-              disabled={agentStatus === 'executing' || agentStatus === 'waiting'}
+              disabled={agentStatus === 'executing' && !streamActiveRef.current}
               className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[#e5e2e1]/20 disabled:opacity-40"
-              placeholder={agentStatus === 'waiting' ? 'En attente de votre réponse...' : 'Entrez une mission...'}
+              placeholder={
+                agentStatus === 'waiting' ? 'Répondez dans le modal ci-dessus...' :
+                streamActiveRef.current ? 'Nouvelle instruction ("continue", "stop" ou "nouveau sujet")...' :
+                'Entrez une mission...'
+              }
             />
             <label className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-[#e5e2e1]/40 cursor-pointer">
               <input type="checkbox" checked={staleBrowser} onChange={e => setStaleBrowser(e.target.checked)} className="w-3 h-3" />
               Stale
             </label>
-            <button onClick={handleCommand} disabled={agentStatus === 'executing' || agentStatus === 'waiting' || !command.trim()}
+            <button onClick={handleCommand} disabled={(agentStatus === 'executing' && !streamActiveRef.current) || agentStatus === 'waiting' || !command.trim()}
               className="bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] font-black text-[9px] uppercase tracking-widest px-4 py-1.5 rounded disabled:opacity-30">
               CMD
             </button>
@@ -369,6 +415,10 @@ export default function App() {
               <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50]">L'agent demande</p>
             </div>
             <p className="text-sm text-[#e5e2e1]/80 mb-5">{feedbackQuestion}</p>
+            <div className="flex gap-2 mb-5">
+              <button onClick={() => handleFeedback('continue')} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/20 rounded hover:bg-[#60a5fa]/10">CONTINUER</button>
+              <button onClick={handleNewConversation} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/20 rounded hover:bg-[#4ade80]/10">NOUVEAU SUJET</button>
+            </div>
             <FeedbackInput question={feedbackQuestion} onSubmit={handleFeedback} onAbort={handleAbort} />
           </div>
         </div>

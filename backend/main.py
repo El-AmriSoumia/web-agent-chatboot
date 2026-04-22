@@ -17,11 +17,12 @@ from pydantic import BaseModel
 
 from backend.agent import run_agent
 from backend.mcp import MCPContext
+from backend.memory import archive_and_reset
 
 app = FastAPI(title='GSAM Agent Backend')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:8000', 'http://127.0.0.1:8000'],
+    allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174', 'http://localhost:8000', 'http://127.0.0.1:8000'],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
@@ -150,8 +151,8 @@ async def run(request: Request, body: RunRequest):
                         event = get_task.result()
                         print(f"BACKEND: Sending event: {event['type']}")
                         yield sse_format(event)
-                        if event.get('type') in {'done', 'error'}:
-                            print("BACKEND: Stream ending")
+                        if event.get('type') == 'error':
+                            print("BACKEND: Stream ending on error")
                             break
                 except asyncio.CancelledError:
                     print("BACKEND: Stream cancelled")
@@ -171,6 +172,21 @@ async def run(request: Request, body: RunRequest):
 
     print("BACKEND: Returning event stream")
     return StreamingResponse(event_stream(), media_type='text/event-stream')
+
+
+@app.post('/reset')
+async def reset():
+    """Archive the current conversation and start a clean slate."""
+    async with state.lock:
+        if state.task and not state.task.done():
+            if state.abort_event:
+                state.abort_event.set()
+            state.task.cancel()
+            state.task = None
+        state.feedback_queue = []
+        state.context = None
+    archive_and_reset()
+    return {'status': 'reset', 'message': 'Conversation archived. Ready for a new topic.'}
 
 
 @app.post('/abort')

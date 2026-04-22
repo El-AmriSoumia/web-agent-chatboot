@@ -27,6 +27,7 @@ class TaskAnalysis(BaseModel):
     intent: str
     entity: str
     subtasks: List[str]
+    is_continuation: bool = False
 
 
 if PydanticOutputParser and PromptTemplate:
@@ -36,6 +37,14 @@ if PydanticOutputParser and PromptTemplate:
 Analyze this task and return only a raw JSON object that matches the schema below.
 
 Task: "{task}"
+
+## Historical Context (previous sessions):
+{history_context}
+
+Rules for subtasks:
+- If is_continuation is true, do NOT include steps already completed in the history above.
+- Only list the remaining steps needed to complete the task.
+- If this is a brand new task unrelated to history, set is_continuation to false and list all steps.
 
 {format_instructions}
 
@@ -56,9 +65,26 @@ def _parse_json_safe(text: str) -> dict:
 
 
 async def analyze_task(text: str) -> Dict:
+    from backend.memory import get_recent_sessions
+    sessions = get_recent_sessions(5)
+    if sessions:
+        history_lines = []
+        for s in reversed(sessions):
+            ts = s.get('timestamp', '')[:10]
+            status = s.get('status', '').upper()
+            task = s.get('task', '')
+            result = s.get('result', '')
+            history_lines.append(f'[{ts}] [{status}] {task}')
+            if result:
+                history_lines.append(f'  => {result}')
+        history_context = '\n'.join(history_lines)
+    else:
+        history_context = 'No previous sessions.'
+
     if TASK_ANALYSIS_PROMPT and TASK_ANALYSIS_PARSER:
         prompt_text = TASK_ANALYSIS_PROMPT.format(
             task=text,
+            history_context=history_context,
             format_instructions=TASK_ANALYSIS_PARSER.get_format_instructions()
         )
     else:
@@ -67,10 +93,19 @@ Analyze this task and return only a raw JSON object that matches the schema belo
 
 Task: "{text}"
 
+## Historical Context (previous sessions):
+{history_context}
+
+Rules for subtasks:
+- If is_continuation is true, do NOT include steps already completed in the history above.
+- Only list the remaining steps needed to complete the task.
+- If this is a brand new task unrelated to history, set is_continuation to false and list all steps.
+
 {{
   "intent": "SCAN_SEARCH|FORM_FILL|DATA_EXTRACT|VAULT_EXPORT|DEEP_SWEEP",
   "entity": "main target name",
-  "subtasks": ["step 1", "step 2", "step 3"]
+  "subtasks": ["step 1", "step 2", "step 3"],
+  "is_continuation": false
 }}
 
 The JSON must be valid and contain exactly the fields defined by the schema.
@@ -126,5 +161,6 @@ The JSON must be valid and contain exactly the fields defined by the schema.
     return {
         'intent': intent,
         'entity': entity,
-        'subtasks': subtasks.get(intent, ['Analyze task', 'Execute', 'Report results'])
+        'subtasks': subtasks.get(intent, ['Analyze task', 'Execute', 'Report results']),
+        'is_continuation': False,
     }

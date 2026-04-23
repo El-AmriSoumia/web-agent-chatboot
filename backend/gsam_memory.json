@@ -1,86 +1,6 @@
 {
   "sessions": [
     {
-      "timestamp": "2026-04-22T14:26:03.314513Z",
-      "task": "remplire le fichier https://www.automationtesting.co.uk/contactForm.html",
-      "intent": "DONE",
-      "result": "The contact form on https://www.automationtesting.co.uk/contactForm.html was successfully filled and submitted. The current page confirms the mail has been sent.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T14:29:57.265676Z",
-      "task": "cherche sur https://www.automationtesting.co.uk et donne le contenut de chauqe page",
-      "intent": "DATA_EXTRACT",
-      "result": "{'current_page_url': 'https://www.automationtesting.co.uk/', 'page_header': 'Automation Testing Test Arena', 'main_heading': 'Testing Arena', 'description': 'This website has been designed to help you practice your test automation skills by providing various scenarios that you will find across the web. Use the menu on the left to navigate across the website.', 'courses_discount_info': 'For regular discounts of up to 89% on our courses , check out the links at webdriveruniversity', 'academy_info': 'To learn more about our brand and who we are, check our Academy site at futureskillzacademy', 'courses_available': [{'title': 'API Testing in Detail!', 'content': 'Learn all about APIs and how to test them using Postman, including the use of artificial intelligence (AI). APIs play a very important role in how applications communicate across the web. This course is designed to teach you all about APIs and how to test them using Postman, the most popular API testing tool available!'}, {'title': 'Cypress', 'content_start': 'w...'}]}",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T14:32:14.516681Z",
-      "task": "cherche canva",
-      "intent": "DONE",
-      "result": "Successfully navigated to Canva.com.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:15:44.182041Z",
-      "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
-      "intent": "FORM_FILL",
-      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'sdfghjkl;', 'status': 'Form submitted successfully'}",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:15:58.962904Z",
-      "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
-      "intent": "DONE",
-      "result": "Form filled and submitted successfully. Landed on the thank you page.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:16:21.230905Z",
-      "task": "look for canva",
-      "intent": "DONE",
-      "result": "Successfully navigated to Canva.com.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:29:19.570988Z",
-      "task": "cherche canva",
-      "intent": "DONE",
-      "result": "Successfully navigated to Canva.com.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:32:15.412747Z",
-      "task": "fille the form https://www.automationtesting.co.uk/contactForm.html",
-      "intent": "FORM_FILL",
-      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': \"sdfghjkl;'\", 'status': 'Form submitted successfully'}",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:32:45.843745Z",
-      "task": "fille the form https://www.automationtesting.co.uk/contactForm.html",
-      "intent": "DONE",
-      "result": "Successfully filled and submitted the form on https://www.automationtesting.co.uk/contactForm.html. Then navigated back to the homepage as requested.",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
-      "timestamp": "2026-04-22T15:42:10.716498Z",
-      "task": "connecte a chatgpt",
-      "intent": "FORM_FILL",
-      "result": "{'#upload-files': 'fghjkl', '#upload-photos': 'fghjkl', '#upload-camer': 'fghjkl', 'input:nth-of-type(5)': 'fghjkl', 'status': 'Form submitted successfully'}",
-      "status": "done",
-      "extracted_data": {}
-    },
-    {
       "timestamp": "2026-04-22T15:46:26.931958Z",
       "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
       "intent": "FORM_FILL",
@@ -399,6 +319,86 @@
       "result": "19 messages archived on reset",
       "status": "archived",
       "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:05:20.645767Z",
+      "task": "cherche canva",
+      "intent": "DONE",
+      "result": "Navigated to Canva's website.",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:06:41.845221Z",
+      "task": "clicke sur Commance mon projet",
+      "intent": "FORM_FILL",
+      "result": "{'user': 'continue', 'status': 'Form submitted successfully'}",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:07:59.013859Z",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html",
+      "intent": "FORM_FILL",
+      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'sdfghjkl', 'status': 'Form submitted successfully'}",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:23:03.135968Z",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "intent": "FORM_FILL",
+      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'sdfghjkl;', 'status': 'Form submitted successfully'}",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:29:07.851156Z",
+      "task": "cherche canva",
+      "intent": "DONE",
+      "result": "Navigated to Canva's website as requested.",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:30:45.123261Z",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "intent": "FORM_FILL",
+      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'lkjhgfds', 'status': 'Form submitted successfully'}",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:35:06.875710Z",
+      "task": "cherche canva",
+      "intent": "DONE",
+      "result": "Navigated to Canva's website as requested.",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:37:10.512282Z",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "intent": "FORM_FILL",
+      "result": "{'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'tyhujkl', 'status': 'Form submitted successfully'}",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:42:28.398181Z",
+      "task": "cherche canva",
+      "intent": "DONE",
+      "result": "Navigated to Canva's website as requested.",
+      "status": "done",
+      "extracted_data": {}
+    },
+    {
+      "timestamp": "2026-04-23T22:43:19.184866Z",
+      "task": "cherche canva",
+      "intent": "DONE",
+      "result": "Already on Canva's website as requested.",
+      "status": "done",
+      "extracted_data": {}
     }
   ],
   "global_facts": {},
@@ -480,6 +480,432 @@
       "role": "agent_question",
       "content": "I could not find values for: First name, Surname, Mobile number or email address, Password. Please provide them (format — FieldName: value).",
       "task": "creat new account on facebook"
+    },
+    {
+      "timestamp": "2026-04-23T22:04:33.751082Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:20.717290Z",
+      "role": "agent",
+      "content": "Task completed: Navigated to Canva's website.",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:20.759783Z",
+      "role": "agent_question",
+      "content": "Tâche terminée. Que souhaitez-vous que je fasse ensuite ?",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:34.678040Z",
+      "role": "user_feedback",
+      "content": "clicke sur Commance mon projet",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:34.903623Z",
+      "role": "user",
+      "content": "clicke sur Commance mon projet",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:45.955635Z",
+      "role": "agent_question",
+      "content": "Action CLICK effectuée. Que souhaitez-vous faire ensuite ? (dites \"continue\" pour que je continue automatiquement, ou donnez une nouvelle instruction)",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:49.058885Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:05:58.594478Z",
+      "role": "agent_question",
+      "content": "",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:20.071890Z",
+      "role": "user_feedback",
+      "content": "cree moi une compte",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:31.824097Z",
+      "role": "agent_question",
+      "content": "Action CLICK effectuée. Que souhaitez-vous faire ensuite ? (dites \"continue\" pour que je continue automatiquement, ou donnez une nouvelle instruction)",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:35.516963Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:41.885086Z",
+      "role": "agent",
+      "content": "Task completed: {'user': 'continue', 'status': 'Form submitted successfully'}",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:41.935081Z",
+      "role": "agent_question",
+      "content": "Form submitted. What do you want to do next?",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:46.493365Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:06:47.603624Z",
+      "role": "agent_question",
+      "content": "CAPTCHA detected. Please solve the CAPTCHA and provide the verification code.",
+      "task": "clicke sur Commance mon projet"
+    },
+    {
+      "timestamp": "2026-04-23T22:07:17.627879Z",
+      "role": "user",
+      "content": "reemplire https://www.automationtesting.co.uk/contactForm.html",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:07:28.445082Z",
+      "role": "agent_question",
+      "content": "Please provide values for: First Name, Last Name, Email Address, Comments",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:07:50.762223Z",
+      "role": "user_feedback",
+      "content": "First Name: SOUMIA, Last Name: EL AMRI, Email Address: soumia.elamri@usmba.ac.ma, Comments: sdfghjkl",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:07:59.074547Z",
+      "role": "agent",
+      "content": "Task completed: {'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'sdfghjkl', 'status': 'Form submitted successfully'}",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:07:59.117937Z",
+      "role": "agent_question",
+      "content": "Form submitted. What do you want to do next?",
+      "task": "reemplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:08:31.992859Z",
+      "role": "user",
+      "content": "cherche des uses sur github with the name samy",
+      "task": "cherche des uses sur github with the name samy"
+    },
+    {
+      "timestamp": "2026-04-23T22:08:49.206313Z",
+      "role": "agent_question",
+      "content": "Please provide values for: Search, textarea, Include my email address so I can be contacted, Name, Query, Add an optional note",
+      "task": "cherche des uses sur github with the name samy"
+    },
+    {
+      "timestamp": "2026-04-23T22:13:52.371375Z",
+      "role": "user",
+      "content": "hi",
+      "task": "hi"
+    },
+    {
+      "timestamp": "2026-04-23T22:19:09.369858Z",
+      "role": "user",
+      "content": "hii",
+      "task": "hii"
+    },
+    {
+      "timestamp": "2026-04-23T22:22:27.417697Z",
+      "role": "user",
+      "content": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:22:45.944763Z",
+      "role": "agent_question",
+      "content": "Please provide values for: First Name, Last Name, Email Address, Comments",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:22:54.586113Z",
+      "role": "user_feedback",
+      "content": "First Name: SOUMIA, Last Name: EL AMRI, Email Address: soumia.elamri@usmba.ac.ma, Comments: sdfghjkl;",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:23:03.197846Z",
+      "role": "agent",
+      "content": "Task completed: {'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'sdfghjkl;', 'status': 'Form submitted successfully'}",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:23:03.250663Z",
+      "role": "agent_question",
+      "content": "Form submitted. What do you want to do next?",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:28:42.829014Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:07.922857Z",
+      "role": "agent",
+      "content": "Task completed: Navigated to Canva's website as requested.",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:08.120797Z",
+      "role": "agent_question",
+      "content": "Tâche terminée. Que souhaitez-vous que je fasse ensuite ?",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:11.614481Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:11.702663Z",
+      "role": "user",
+      "content": "continue",
+      "task": "continue"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:23.049732Z",
+      "role": "agent_question",
+      "content": "Action CLICK effectuée. Que souhaitez-vous faire ensuite ? (dites \"continue\" pour que je continue automatiquement, ou donnez une nouvelle instruction)",
+      "task": "continue"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:36.050971Z",
+      "role": "user",
+      "content": "cherche facebook",
+      "task": "cherche facebook"
+    },
+    {
+      "timestamp": "2026-04-23T22:29:49.284292Z",
+      "role": "agent_question",
+      "content": "Please provide values for: E-mail ou numéro de mobile, Mot de passe, Se connecter",
+      "task": "cherche facebook"
+    },
+    {
+      "timestamp": "2026-04-23T22:30:14.445846Z",
+      "role": "user",
+      "content": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:30:30.566995Z",
+      "role": "agent_question",
+      "content": "Please provide values for: First Name, Last Name, Email Address, Comments",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:30:36.813660Z",
+      "role": "user_feedback",
+      "content": "First Name: SOUMIA, Last Name: EL AMRI, Email Address: soumia.elamri@usmba.ac.ma, Comments: lkjhgfds",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:30:45.158297Z",
+      "role": "agent",
+      "content": "Task completed: {'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'lkjhgfds', 'status': 'Form submitted successfully'}",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:30:45.215201Z",
+      "role": "agent_question",
+      "content": "Form submitted. What do you want to do next?",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:33:52.983345Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:34:32.559339Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:35:06.961391Z",
+      "role": "agent",
+      "content": "Task completed: Navigated to Canva's website as requested.",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:35:07.042855Z",
+      "role": "agent_question",
+      "content": "Tâche terminée. Que souhaitez-vous que je fasse ensuite ?",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:35:54.740191Z",
+      "role": "user",
+      "content": "cherche facebook",
+      "task": "cherche facebook"
+    },
+    {
+      "timestamp": "2026-04-23T22:36:37.358584Z",
+      "role": "user",
+      "content": "remplire https://www.automationtesting.co.uk/contactForm.html",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:36:55.366652Z",
+      "role": "agent_question",
+      "content": "Please provide values for: First Name, Last Name, Email Address, Comments",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:02.127642Z",
+      "role": "user_feedback",
+      "content": "First Name: SOUMIA, Last Name: EL AMRI, Email Address: soumia.elamri@usmba.ac.ma, Comments: tyhujkl",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:10.638866Z",
+      "role": "agent",
+      "content": "Task completed: {'first_': 'SOUMIA', 'last_': 'EL AMRI', 'il': 'soumia.elamri@usmba.ac.ma', 'ssag': 'tyhujkl', 'status': 'Form submitted successfully'}",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:10.721285Z",
+      "role": "agent_question",
+      "content": "Form submitted. What do you want to do next?",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:14.723826Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "remplire https://www.automationtesting.co.uk/contactForm.html"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:35.301641Z",
+      "role": "user",
+      "content": "cherche avito",
+      "task": "cherche avito"
+    },
+    {
+      "timestamp": "2026-04-23T22:37:59.691729Z",
+      "role": "agent_question",
+      "content": "Action NAVIGATE effectuée. Que souhaitez-vous faire ensuite ? (dites \"continue\" pour que je continue automatiquement, ou donnez une nouvelle instruction)",
+      "task": "cherche avito"
+    },
+    {
+      "timestamp": "2026-04-23T22:38:12.213524Z",
+      "role": "user_feedback",
+      "content": "cherche sur avito",
+      "task": "cherche avito"
+    },
+    {
+      "timestamp": "2026-04-23T22:38:12.272104Z",
+      "role": "user",
+      "content": "cherche sur avito",
+      "task": "cherche sur avito"
+    },
+    {
+      "timestamp": "2026-04-23T22:38:24.333017Z",
+      "role": "agent_question",
+      "content": "I could not find values for: StarFill IconSauvegarder la recherche, Que recherchez-vous ?, Min, Max, Annonces avec prix uniquement, Annonces avec photos-videos uniquement, Annonces en promo uniquement, Annonces urgentes uniquement. Please provide them (format — FieldName: value).",
+      "task": "cherche sur avito"
+    },
+    {
+      "timestamp": "2026-04-23T22:41:58.722383Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:28.437417Z",
+      "role": "agent",
+      "content": "Task completed: Navigated to Canva's website as requested.",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:28.478547Z",
+      "role": "agent_question",
+      "content": "Tâche terminée. Que souhaitez-vous que je fasse ensuite ?",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:34.707429Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:34.757355Z",
+      "role": "user",
+      "content": "continue",
+      "task": "continue"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:40.404542Z",
+      "role": "agent_question",
+      "content": "",
+      "task": "continue"
+    },
+    {
+      "timestamp": "2026-04-23T22:42:49.202967Z",
+      "role": "user",
+      "content": "cherche canva",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:43:19.250460Z",
+      "role": "agent",
+      "content": "Task completed: Already on Canva's website as requested.",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:43:19.314639Z",
+      "role": "agent_question",
+      "content": "Tâche terminée. Que souhaitez-vous que je fasse ensuite ?",
+      "task": "cherche canva"
+    },
+    {
+      "timestamp": "2026-04-23T22:43:49.872827Z",
+      "role": "user",
+      "content": "cherche ghgh",
+      "task": "cherche ghgh"
+    },
+    {
+      "timestamp": "2026-04-23T22:44:05.054200Z",
+      "role": "agent_question",
+      "content": "Please provide values for: Search, input",
+      "task": "cherche ghgh"
+    },
+    {
+      "timestamp": "2026-04-23T22:44:14.225692Z",
+      "role": "user_feedback",
+      "content": "continue",
+      "task": "cherche ghgh"
+    },
+    {
+      "timestamp": "2026-04-23T22:44:15.167530Z",
+      "role": "agent_question",
+      "content": "I could not find values for: Search, input, Include playlist, Include playlist. Please provide them (format — FieldName: value).",
+      "task": "cherche ghgh"
     }
   ]
 }

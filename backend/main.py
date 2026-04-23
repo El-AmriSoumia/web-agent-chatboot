@@ -32,6 +32,7 @@ class RunRequest(BaseModel):
     task: str
     stale_browser: bool = False
     skip_anti_bot: bool = False
+    show_browser: bool = False
 
 class FeedbackRequest(BaseModel):
     message: str
@@ -109,6 +110,7 @@ async def run(request: Request, body: RunRequest):
                 skip_anti_bot=body.skip_anti_bot,
                 feedback_queue=state.feedback_queue,
                 user_reply_event=state.user_reply_event,
+                show_browser=body.show_browser,
             )
             print("BACKEND: Agent completed successfully")
         except asyncio.CancelledError:

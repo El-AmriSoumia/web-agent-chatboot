@@ -22,7 +22,7 @@ function FeedbackInput({ question, onSubmit, onAbort }) {
               value={values[f] || ''}
               onChange={e => setValues(p => ({ ...p, [f]: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') document.getElementById('feedback-send')?.click() }}
-              className="w-full bg-[#111] border border-[#4d4635]/40 rounded px-3 py-2 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#f2ca50]/60"
+              className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#f2ca50]/60"
               placeholder={`${f}...`}
             />
           </div>
@@ -44,7 +44,7 @@ function FeedbackInput({ question, onSubmit, onAbort }) {
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && text.trim()) { e.preventDefault(); onSubmit(text.trim()) } }}
-        className="w-full bg-[#111] border border-[#4d4635]/40 rounded px-3 py-2 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#f2ca50]/60 resize-none"
+        className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#f2ca50]/60 resize-none placeholder:text-white/40"
         placeholder="Votre réponse... (Enter pour envoyer)"
       />
       <div className="flex gap-2">
@@ -64,20 +64,20 @@ function AgentMessage({ msg }) {
           {msg.status === 'done' ? 'check_circle' : msg.status === 'running' ? 'pending' : 'radio_button_unchecked'}
         </span>
         <div>
-          <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50]">{msg.name}</p>
-          {msg.args && <p className="text-[11px] text-[#e5e2e1]/50 mt-0.5">{msg.args}</p>}
+          <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50] drop-shadow">{msg.name}</p>
+          {msg.args && <p className="text-[11px] text-white/50 mt-0.5">{msg.args}</p>}
         </div>
       </div>
     )
   }
   if (msg.type === 'result') {
     return (
-      <div className="bg-[#0e0e0e] border border-[#f2ca50]/20 rounded-xl p-5 my-3">
+      <div className="bg-black/40 backdrop-blur-sm border border-[#f2ca50]/20 rounded-xl p-5 my-3">
         <p className="text-[10px] text-[#f2ca50] font-bold uppercase tracking-widest mb-3">✓ Résultat</p>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(msg.data).map(([k, v]) => (
-            <div key={k} className="bg-[#1a1a1a] rounded p-3">
-              <p className="text-[9px] text-[#e5e2e1]/40 uppercase tracking-widest mb-1">{k.replace(/_/g, ' ')}</p>
+            <div key={k} className="bg-white/5 rounded p-3">
+              <p className="text-[9px] text-white/40 uppercase tracking-widest mb-1">{k.replace(/_/g, ' ')}</p>
               <p className="text-sm font-bold text-[#f2ca50] break-all">{String(v)}</p>
             </div>
           ))}
@@ -87,33 +87,26 @@ function AgentMessage({ msg }) {
   }
   if (msg.type === 'question') {
     return (
-      <div className="bg-[#1a1400] border border-[#f2ca50]/30 rounded-xl p-4 my-3">
+      <div className="bg-black/40 backdrop-blur-sm border border-[#f2ca50]/30 rounded-xl p-4 my-3">
         <div className="flex items-center gap-2 mb-2">
           <span className="material-symbols-outlined text-[#f2ca50] text-base">help</span>
           <p className="text-[10px] text-[#f2ca50] font-bold uppercase tracking-widest">Agent demande</p>
         </div>
-        <p className="text-sm text-[#e5e2e1]/80">{msg.text}</p>
+        <p className="text-sm text-white/80">{msg.text}</p>
       </div>
     )
   }
   if (msg.type === 'user') {
     return (
       <div className="flex justify-end my-2">
-        <div className="bg-[#1c1b1b] border border-[#4d4635]/20 rounded-xl rounded-tr-none px-4 py-3 max-w-[80%]">
+        <div className="bg-[#f2ca50]/10 backdrop-blur-sm border border-[#f2ca50]/20 rounded-xl rounded-tr-none px-4 py-3 max-w-[80%]">
           <p className="text-[9px] text-[#f2ca50]/50 uppercase tracking-widest mb-1">{msg.time}</p>
-          <p className="text-sm text-[#e5e2e1]/90">{msg.text}</p>
+          <p className="text-sm text-white/90">{msg.text}</p>
         </div>
       </div>
     )
   }
-  if (msg.type === 'screenshot') {
-    return (
-      <div className="my-3 rounded-xl overflow-hidden border border-[#4d4635]/20">
-        <img src={msg.src} alt="screenshot" className="w-full h-auto block" />
-        {msg.url && <p className="text-[9px] text-[#e5e2e1]/30 px-3 py-1 bg-[#0e0e0e] truncate">{msg.url}</p>}
-      </div>
-    )
-  }
+  // screenshots are intentionally NOT rendered in the conversation zone
   if (msg.type === 'abort') {
     return <p className="text-center text-[#ffb4ab] text-[11px] uppercase tracking-widest py-3">⊗ Mission abortée</p>
   }
@@ -125,7 +118,7 @@ export default function App() {
   const [backendUrl, setBackendUrl] = useState('')
   const [backendAvailable, setBackendAvailable] = useState(false)
   const [command, setCommand] = useState('')
-  const [agentStatus, setAgentStatus] = useState('idle') // idle | executing | waiting | complete | error
+  const [agentStatus, setAgentStatus] = useState('idle')
   const [messages, setMessages] = useState([])
   const [currentUrl, setCurrentUrl] = useState('')
   const [lastScreenshot, setLastScreenshot] = useState(null)
@@ -134,13 +127,13 @@ export default function App() {
   const [showSafety, setShowSafety] = useState(false)
   const [safetyMsg, setSafetyMsg] = useState('')
   const [staleBrowser, setStaleBrowser] = useState(false)
+  const [showBrowser, setShowBrowser] = useState(false)
 
   const scrollRef = useRef(null)
   const cmdRef = useRef(null)
   const controllerRef = useRef(null)
   const streamActiveRef = useRef(false)
 
-  // probe backend
   useEffect(() => {
     let canceled = false
     const ctrl = new AbortController();
@@ -167,7 +160,7 @@ export default function App() {
     switch (event.type) {
       case 'screenshot':
         setLastScreenshot(`data:image/png;base64,${event.data}`)
-        if (event.data) addMsg({ type: 'screenshot', src: `data:image/png;base64,${event.data}`, url: currentUrl })
+        // screenshots go to sidebar only, NOT to conversation
         break
       case 'url':
         setCurrentUrl(event.value || '')
@@ -198,7 +191,6 @@ export default function App() {
         setAgentStatus('error')
         break
       case 'done':
-        // Ne pas écraser 'waiting' — le ask_user post-done doit rester visible
         setAgentStatus(prev => prev === 'waiting' ? 'waiting' : 'complete')
         break
       default:
@@ -214,7 +206,6 @@ export default function App() {
   }
 
   const startAgent = async (task) => {
-    // If stream already open, just send as feedback (continuing same session)
     if (streamActiveRef.current) {
       addMsg({ type: 'user', text: task, time: new Date().toTimeString().slice(0, 8) })
       setAgentStatus('executing')
@@ -238,7 +229,7 @@ export default function App() {
       const res = await fetch(`${backendUrl}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task, stale_browser: staleBrowser, skip_anti_bot: true }),
+        body: JSON.stringify({ task, stale_browser: staleBrowser, skip_anti_bot: true, show_browser: showBrowser }),
         signal: controllerRef.current.signal
       })
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
@@ -267,7 +258,6 @@ export default function App() {
   const handleCommand = () => {
     if (!command.trim()) return
     if (!backendAvailable) return
-    // Allow new instructions while stream is active (routes as feedback)
     if (agentStatus === 'executing' && !streamActiveRef.current) return
     if (agentStatus === 'waiting') return
     startAgent(command.trim())
@@ -285,6 +275,7 @@ export default function App() {
       body: JSON.stringify({ message: answer })
     }).catch(() => {})
   }
+
   const handleConfirm = async () => {
     setShowSafety(false)
     setAgentStatus('executing')
@@ -304,10 +295,6 @@ export default function App() {
     setCommand('')
   }
 
-  const handleNewConversation = async () => {
-    await handleReset()
-  }
-
   const handleAbort = async () => {
     controllerRef.current?.abort()
     streamActiveRef.current = false
@@ -321,116 +308,186 @@ export default function App() {
   const statusColor = { idle: '#e5e2e1', executing: '#f2ca50', waiting: '#60a5fa', complete: '#4ade80', error: '#f87171' }[agentStatus] || '#e5e2e1'
 
   return (
-    <div className="flex h-screen w-full bg-[#0a0a0a] text-[#e5e2e1] overflow-hidden">
-      <div className="fixed inset-0 z-[-2] bg-cover bg-center opacity-10" style={{ backgroundImage: `url(${ASSET_IMAGE})` }} />
+    <div className="flex h-screen w-full overflow-hidden text-white relative">
 
-      {/* MAIN PANEL */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      {/* ── FULL-SCREEN BACKGROUND IMAGE ── */}
+      <div
+        className="fixed inset-0 z-0"
+        style={{
+          backgroundImage: `url(${ASSET_IMAGE})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+      {/* Dark overlay so text stays readable */}
+      <div className="fixed inset-0 z-0 bg-black/60" />
 
-        {/* HEADER */}
-        <header className="flex items-center justify-between px-6 py-3 bg-[#111] border-b border-[#4d4635]/20 shrink-0">
+      {/* ── MAIN PANEL ── */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
+
+        {/* HEADER — glassmorphism */}
+        <header className="flex items-center justify-between px-6 py-3 bg-black/30 backdrop-blur-md border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: statusColor, boxShadow: `0 0 8px ${statusColor}` }} />
             <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: statusColor }}>
               {agentStatus.toUpperCase()}
             </span>
           </div>
-          <h1 className="text-[#f2ca50] font-black tracking-widest text-sm">GSAM | PRIVATE INTELLIGENCE</h1>
+
+          {/* LOGO + TITLE */}
+          <div className="flex items-center gap-3">
+            <img
+              src={ASSET_IMAGE}
+              alt="GSAM"
+              className="h-9 w-9 rounded-full object-cover border-2 border-[#f2ca50]/50"
+              style={{ boxShadow: '0 0 12px rgba(242,202,80,0.4)' }}
+            />
+            <h1 className="text-[#f2ca50] font-black tracking-widest text-sm drop-shadow">GSAM | PRIVATE INTELLIGENCE</h1>
+          </div>
+
           <div className="flex items-center gap-2">
-            <button onClick={handleReset} className="text-[9px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/20 px-3 py-1.5 rounded hover:bg-[#4ade80]/10">
+            <button onClick={handleReset} className="text-[9px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/30 px-3 py-1.5 rounded hover:bg-[#4ade80]/10 backdrop-blur-sm">
               NOUVEAU SUJET
             </button>
-            <button onClick={handleAbort} className="text-[9px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 px-3 py-1.5 rounded hover:bg-[#ffb4ab]/10">
+            <button onClick={handleAbort} className="text-[9px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/30 px-3 py-1.5 rounded hover:bg-[#ffb4ab]/10 backdrop-blur-sm">
               ABORT
             </button>
           </div>
         </header>
 
         {!backendAvailable && (
-          <div className="mx-4 mt-3 p-3 rounded border border-red-500/30 bg-red-500/10 text-[11px] text-red-400 uppercase tracking-widest">
+          <div className="mx-4 mt-3 p-3 rounded border border-red-500/30 bg-red-500/10 backdrop-blur-sm text-[11px] text-red-400 uppercase tracking-widest">
             Backend indisponible — lance: uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
           </div>
         )}
 
-        {/* MESSAGES AREA */}
+        {/* MESSAGES AREA — fully transparent, background shows through */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-30">
-              <span className="material-symbols-outlined text-6xl text-[#f2ca50]">terminal</span>
-              <p className="text-sm uppercase tracking-widest">Entrez une mission ci-dessous</p>
+            <div className="flex flex-col items-center justify-center h-full gap-6">
+              <img
+                src={ASSET_IMAGE}
+                alt="GSAM"
+                className="w-28 h-28 rounded-full object-cover border-2 border-[#f2ca50]/40 opacity-80"
+                style={{ boxShadow: '0 0 40px rgba(242,202,80,0.25)' }}
+              />
+              <p className="text-sm uppercase tracking-widest text-white/50">Entrez une mission ci-dessous</p>
             </div>
           )}
           {messages.map(msg => <AgentMessage key={msg.id} msg={msg} />)}
         </div>
 
-        {/* INPUT BAR */}
-        <div className="shrink-0 px-4 py-3 bg-[#111] border-t border-[#4d4635]/20">
-          <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#4d4635]/30 rounded-lg px-3 py-2">
-            <span className="material-symbols-outlined text-[#f2ca50]/40 text-lg">terminal</span>
+        {/* INPUT BAR — glassmorphism */}
+        <div className="shrink-0 px-4 py-3 bg-black/30 backdrop-blur-md border-t border-white/10">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <span className="material-symbols-outlined text-[#f2ca50]/60 text-lg">terminal</span>
             <input
               ref={cmdRef}
               value={command}
               onChange={e => setCommand(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCommand() } }}
               disabled={agentStatus === 'executing' && !streamActiveRef.current}
-              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[#e5e2e1]/20 disabled:opacity-40"
+              className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-white/30 disabled:opacity-40 text-white"
               placeholder={
                 agentStatus === 'waiting' ? 'Répondez dans le modal ci-dessus...' :
-                streamActiveRef.current ? 'Nouvelle instruction ("continue", "stop" ou "nouveau sujet")...' :
+                streamActiveRef.current ? 'Nouvelle instruction (ou "stop" pour arrêter)...' :
                 'Entrez une mission...'
               }
             />
-            <label className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-[#e5e2e1]/40 cursor-pointer">
+            <label className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-white/40 cursor-pointer">
               <input type="checkbox" checked={staleBrowser} onChange={e => setStaleBrowser(e.target.checked)} className="w-3 h-3" />
               Stale
             </label>
-            <button onClick={handleCommand} disabled={(agentStatus === 'executing' && !streamActiveRef.current) || agentStatus === 'waiting' || !command.trim()}
-              className="bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] font-black text-[9px] uppercase tracking-widest px-4 py-1.5 rounded disabled:opacity-30">
+            <label className="flex items-center gap-1 text-[9px] uppercase tracking-widest cursor-pointer" style={{ color: showBrowser ? '#60a5fa' : 'rgba(255,255,255,0.4)' }}>
+              <input type="checkbox" checked={showBrowser} onChange={e => setShowBrowser(e.target.checked)} className="w-3 h-3" />
+              <span className="material-symbols-outlined text-xs">desktop_windows</span>
+              PC
+            </label>
+            <button
+              onClick={handleCommand}
+              disabled={(agentStatus === 'executing' && !streamActiveRef.current) || agentStatus === 'waiting' || !command.trim()}
+              className="bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] font-black text-[9px] uppercase tracking-widest px-4 py-1.5 rounded disabled:opacity-30"
+            >
               CMD
             </button>
           </div>
         </div>
       </main>
 
-      {/* SIDEBAR — screenshot */}
-      <aside className="hidden xl:flex flex-col w-80 bg-[#0e0e0e] border-l border-[#4d4635]/20">
-        <div className="p-3 border-b border-[#4d4635]/20">
+      {/* ── SIDEBAR — live screenshots ── */}
+      <aside className="hidden xl:flex flex-col w-96 bg-black/30 backdrop-blur-md border-l border-white/10 relative z-10">
+        <div className="p-3 border-b border-white/10 flex items-center gap-2">
+          <span className="material-symbols-outlined text-[#f2ca50] text-sm">screenshot_monitor</span>
           <p className="text-[10px] uppercase tracking-widest text-[#f2ca50] font-bold">Live Browser</p>
-          {currentUrl && <p className="text-[9px] text-[#e5e2e1]/30 truncate mt-1">{currentUrl}</p>}
+          {currentUrl && (
+            <a
+              href={currentUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Ouvrir dans le navigateur"
+              className="ml-auto flex items-center gap-1 text-[9px] text-[#60a5fa]/70 hover:text-[#60a5fa] border border-[#60a5fa]/20 hover:border-[#60a5fa]/50 px-2 py-1 rounded transition-colors"
+            >
+              <span className="material-symbols-outlined text-xs">open_in_new</span>
+              OUVRIR
+            </a>
+          )}
         </div>
-        <div className="flex-1 bg-black overflow-hidden">
-          {lastScreenshot
-            ? <img src={lastScreenshot} alt="browser" className="w-full h-auto" />
-            : <div className="flex items-center justify-center h-48 text-[#e5e2e1]/20 text-[10px] uppercase tracking-widest">En attente...</div>
-          }
+        {currentUrl && (
+          <div className="px-3 py-1.5 bg-black/20 border-b border-white/5">
+            <p className="text-[9px] text-white/30 truncate">{currentUrl}</p>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto bg-white">
+          {lastScreenshot ? (
+            <img
+              src={lastScreenshot}
+              alt="browser"
+              className="w-full h-auto block"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-3 bg-black/20">
+              <span className="material-symbols-outlined text-white/20 text-4xl">travel_explore</span>
+              <p className="text-white/20 text-[10px] uppercase tracking-widest">En attente...</p>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* FEEDBACK MODAL */}
+      {/* ── FEEDBACK MODAL ── */}
       {showFeedback && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-[#f2ca50]/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-black/60 backdrop-blur-xl border border-[#f2ca50]/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined text-[#f2ca50]">help</span>
               <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50]">L'agent demande</p>
             </div>
-            <p className="text-sm text-[#e5e2e1]/80 mb-5">{feedbackQuestion}</p>
-            <div className="flex gap-2 mb-5">
-              <button onClick={() => handleFeedback('continue')} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/20 rounded hover:bg-[#60a5fa]/10">CONTINUER</button>
-              <button onClick={handleNewConversation} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/20 rounded hover:bg-[#4ade80]/10">NOUVEAU SUJET</button>
+            <p className="text-sm text-white/80 mb-4">{feedbackQuestion}</p>
+            {/* Quick-action buttons */}
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => handleFeedback('continue')} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/30 rounded hover:bg-[#60a5fa]/10">
+                CONTINUER
+              </button>
+              <button onClick={handleReset} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/30 rounded hover:bg-[#4ade80]/10">
+                NOUVEAU SUJET
+              </button>
+              <button onClick={handleAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/30 rounded hover:bg-[#ffb4ab]/10">
+                STOP
+              </button>
             </div>
             <FeedbackInput question={feedbackQuestion} onSubmit={handleFeedback} onAbort={handleAbort} />
           </div>
         </div>
       )}
 
-      {/* SAFETY MODAL */}
+      {/* ── SAFETY MODAL ── */}
       {showSafety && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-[#f2ca50]/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-black/60 backdrop-blur-xl border border-[#f2ca50]/20 rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <span className="material-symbols-outlined text-[#f2ca50] text-4xl block text-center mb-3">gpp_maybe</span>
             <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50] text-center mb-3">Confirmation requise</p>
-            <p className="text-sm text-[#e5e2e1]/70 text-center mb-6">{safetyMsg}</p>
+            <p className="text-sm text-white/70 text-center mb-6">{safetyMsg}</p>
             <div className="flex gap-3">
               <button onClick={handleAbort} className="flex-1 py-2.5 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded-lg hover:bg-[#ffb4ab]/10">ABORT</button>
               <button onClick={handleConfirm} className="flex-1 py-2.5 text-[10px] uppercase tracking-widest font-bold bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] rounded-lg">CONFIRM</button>

@@ -5,6 +5,12 @@ body { font-family: 'Manrope', sans-serif; }
 .gold-gradient {
     background: linear-gradient(135deg, #f2ca50, #d4af37);
 }
+.usaamm-bg {
+    background: 
+        radial-gradient(ellipse at 20% 50%, rgba(242, 202, 80, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 30%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(212, 175, 55, 0.05) 50%, rgba(0, 0, 0, 0.9) 100%);
+}
 .ghost-border {
     border: 1px solid rgba(77, 70, 53, 0.15);
 }

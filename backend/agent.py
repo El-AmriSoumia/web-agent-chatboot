@@ -497,12 +497,12 @@ def _build_playwright_args(skip_anti_bot: bool) -> List[str]:
     return args
 
 
-def _create_playwright_browser_page(playwright, stale: bool, skip_anti_bot: bool):
+def _create_playwright_browser_page(playwright, stale: bool, skip_anti_bot: bool, headless: bool = True):
     launch_args = _build_playwright_args(skip_anti_bot)
     if stale:
         browser = playwright.chromium.launch_persistent_context(
             user_data_dir=PLAYWRIGHT_USER_DATA_DIR,
-            headless=True,
+            headless=headless,
             args=launch_args,
             viewport={'width': 1280, 'height': 800},
             user_agent=PLAYWRIGHT_USER_AGENT if skip_anti_bot else None,
@@ -512,7 +512,7 @@ def _create_playwright_browser_page(playwright, stale: bool, skip_anti_bot: bool
         page = browser.pages[0] if browser.pages else browser.new_page()
         return browser, page
 
-    browser = playwright.chromium.launch(headless=True, args=launch_args)
+    browser = playwright.chromium.launch(headless=headless, args=launch_args)
     context = browser.new_context(
         viewport={'width': 1280, 'height': 800},
         user_agent=PLAYWRIGHT_USER_AGENT if skip_anti_bot else None,
@@ -811,6 +811,7 @@ def _run_playwright_sync(
     skip_anti_bot: bool = False,
     feedback_queue: Optional[List[str]] = None,
     user_reply_event: Optional[Any] = None,
+    show_browser: bool = False,
 ) -> None:
     def _run_legacy_loop(page):
         nonlocal task  # allow updating task with new user instructions
@@ -1353,6 +1354,7 @@ def _run_playwright_sync(
             playwright,
             stale=stale_browser or PLAYWRIGHT_STALE,
             skip_anti_bot=skip_anti_bot or PLAYWRIGHT_SKIP_ANTI_BOT,
+            headless=not show_browser,
         )
         if skip_anti_bot or PLAYWRIGHT_SKIP_ANTI_BOT:
             _apply_anti_bot_page_settings(page)
@@ -1673,6 +1675,7 @@ async def run_agent(
     context_callback: Optional[Callable[[MCPContext], None]] = None,
     feedback_queue: Optional[List[str]] = None,
     user_reply_event: Optional[Any] = None,
+    show_browser: bool = False,
 ) -> MCPContext:
     # Save user task to persistent memory
     append_conversation('user', task, task=task)
@@ -1720,6 +1723,7 @@ async def run_agent(
             skip_anti_bot,
             feedback_queue,
             user_reply_event,
+            show_browser,
         )
     except Exception as exc:
         await send_event({'type': 'error', 'message': str(exc)})

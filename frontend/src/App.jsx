@@ -3,39 +3,40 @@ import { useEffect, useRef, useState } from 'react'
 const ASSET_IMAGE = '/gsam-bg.png'
 
 function FeedbackInput({ question, onSubmit, onAbort }) {
-  const [values, setValues] = useState({})
   const [text, setText] = useState('')
 
-  const fieldMatch = question?.match(/(?:for[:\s]+)(.+)/i)
-  const fields = fieldMatch
-    ? fieldMatch[1].split(/,/).map(f => f.trim()).filter(Boolean)
+  // Detect select options: "Label (options: A, B, C) :"
+  const selectMatch = question?.match(/\(options:\s*(.+?)\)\s*:?\s*$/i)
+  const selectOptions = selectMatch
+    ? selectMatch[1].split(',').map(o => o.trim()).filter(Boolean)
     : null
 
-  if (fields && fields.length > 1) {
+  // Select field: show clickable option buttons
+  if (selectOptions && selectOptions.length > 0) {
     return (
       <div className="space-y-3">
-        {fields.map(f => (
-          <div key={f}>
-            <label className="text-[9px] uppercase tracking-widest text-[#f2ca50]/70 mb-1 block">{f}</label>
-            <input
-              autoFocus={fields[0] === f}
-              value={values[f] || ''}
-              onChange={e => setValues(p => ({ ...p, [f]: e.target.value }))}
-              onKeyDown={e => { if (e.key === 'Enter') document.getElementById('feedback-send')?.click() }}
-              className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#f2ca50]/60"
-              placeholder={`${f}...`}
-            />
-          </div>
-        ))}
-        <div className="flex gap-2 pt-1">
-          <button onClick={onAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded hover:bg-[#ffb4ab]/10">ABORT</button>
-          <button id="feedback-send" onClick={() => onSubmit(fields.map(f => `${f}: ${values[f] || ''}`).join(', '))}
-            className="flex-1 py-2 text-[10px] uppercase tracking-widest font-bold bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] rounded">SEND</button>
+        <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+          {selectOptions.map(opt => (
+            <button
+              key={opt}
+              onClick={() => onSubmit(opt)}
+              className="py-2.5 px-3 text-left text-sm text-white bg-white/5 border border-white/15 rounded-lg hover:bg-[#f2ca50]/20 hover:border-[#f2ca50]/50 transition-colors"
+            >
+              {opt}
+            </button>
+          ))}
         </div>
+        <button
+          onClick={onAbort}
+          className="w-full py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded hover:bg-[#ffb4ab]/10"
+        >
+          ABORT
+        </button>
       </div>
     )
   }
 
+  // Regular text input
   return (
     <div className="space-y-3">
       <textarea
@@ -463,19 +464,7 @@ export default function App() {
               <span className="material-symbols-outlined text-[#f2ca50]">help</span>
               <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50]">L'agent demande</p>
             </div>
-            <p className="text-sm text-white/80 mb-4">{feedbackQuestion}</p>
-            {/* Quick-action buttons */}
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => handleFeedback('continue')} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/30 rounded hover:bg-[#60a5fa]/10">
-                CONTINUER
-              </button>
-              <button onClick={handleReset} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/30 rounded hover:bg-[#4ade80]/10">
-                NOUVEAU SUJET
-              </button>
-              <button onClick={handleAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/30 rounded hover:bg-[#ffb4ab]/10">
-                STOP
-              </button>
-            </div>
+            <p className="text-sm text-white/80 mb-4">{feedbackQuestion.replace(/\s*\(options:[^)]+\)/i, '')}</p>
             <FeedbackInput question={feedbackQuestion} onSubmit={handleFeedback} onAbort={handleAbort} />
           </div>
         </div>

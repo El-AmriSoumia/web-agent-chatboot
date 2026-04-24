@@ -43,6 +43,91 @@ class RPAController:
             except Exception:
                 raise e
 
+    def _fill_form_field(self, selector: str, value: str) -> None:
+        """Fill a field based on its real control type, including selects."""
+        locator = self.page.locator(selector).first
+        try:
+            meta = locator.evaluate("""el => ({
+                tag: el.tagName.toLowerCase(),
+                role: (el.getAttribute('role') || '').toLowerCase(),
+                type: (el.getAttribute('type') || '').toLowerCase(),
+                popup: (el.getAttribute('aria-haspopup') || '').toLowerCase()
+            })""")
+        except Exception:
+            meta = {'tag': 'input', 'role': '', 'type': '', 'popup': ''}
+
+        tag = meta.get('tag', 'input')
+        role = meta.get('role', '')
+        input_type = meta.get('type', '')
+        popup = meta.get('popup', '')
+
+        if role in ('combobox', 'listbox') or popup == 'listbox':
+            try:
+                locator.scroll_into_view_if_needed()
+                locator.click()
+                time.sleep(0.2)
+            except Exception:
+                pass
+
+            custom_option_locators = [
+                lambda: self.page.get_by_role('option', name=value, exact=True).first,
+                lambda: self.page.get_by_role('option', name=value, exact=False).first,
+                lambda: self.page.get_by_role('listbox').get_by_text(value, exact=True).first,
+                lambda: self.page.get_by_role('listbox').get_by_text(value, exact=False).first,
+                lambda: self.page.get_by_text(value, exact=True).first,
+                lambda: self.page.get_by_text(value, exact=False).first,
+            ]
+            for option_locator_factory in custom_option_locators:
+                try:
+                    option_locator = option_locator_factory()
+                    option_locator.scroll_into_view_if_needed()
+                    option_locator.click(timeout=3000)
+                    return
+                except Exception:
+                    continue
+            raise ValueError(f'No option matching "{value}" in custom select {selector}')
+
+        if tag == 'select':
+            try:
+                locator.select_option(label=value)
+                return
+            except Exception:
+                pass
+            try:
+                locator.select_option(value=value)
+                return
+            except Exception:
+                pass
+            try:
+                options = locator.evaluate(
+                    'el => Array.from(el.options).map(o => ({ value: o.value, label: o.text.trim() }))'
+                )
+                normalized_value = value.strip().lower()
+                match = next(
+                    (
+                        option for option in options
+                        if normalized_value in (option.get('label') or '').lower()
+                        or normalized_value in (option.get('value') or '').lower()
+                    ),
+                    None,
+                )
+                if match:
+                    locator.select_option(value=match['value'])
+                    return
+            except Exception:
+                pass
+            raise ValueError(f'No option matching "{value}" in select {selector}')
+
+        if tag == 'input':
+            if input_type in ('checkbox', 'radio'):
+                if value.strip().lower() in ('1', 'true', 'yes', 'oui', 'on'):
+                    locator.check()
+                else:
+                    locator.uncheck()
+                return
+
+        self._human_type(selector, value)
+
     def navigate(self, url: str) -> str:
         self._log_action('navigate', {'url': url})
         try:
@@ -110,7 +195,7 @@ class RPAController:
             for field in fields:
                 selector = field.get('selector', '')
                 value = field.get('value', '')
-                self._human_type(selector, value)
+                self._fill_form_field(selector, value)
                 time.sleep(random.uniform(0.3, 0.7))  # Pause between fields
             self._send_event({'type': 'log', 'message': f'Filled form with {len(fields)} fields'})
             self._send_event({'type': 'step', 'name': 'FILL_FORM', 'args': f'{len(fields)} fields', 'status': 'done'})

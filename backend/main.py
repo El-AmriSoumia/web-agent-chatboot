@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from backend.agent import run_agent
 from backend.mcp import MCPContext
-from backend.memory import archive_and_reset
+from backend.memory import archive_and_reset, get_active_session
 
 app = FastAPI(title='GSAM Agent Backend')
 app.add_middleware(
@@ -31,7 +31,7 @@ app.add_middleware(
 class RunRequest(BaseModel):
     task: str
     stale_browser: bool = False
-    skip_anti_bot: bool = False
+    skip_anti_bot: bool = True
     show_browser: bool = False
 
 class FeedbackRequest(BaseModel):
@@ -69,8 +69,16 @@ async def get_status():
 async def get_context():
     async with state.lock:
         if state.context:
-            return {'context': state.context.get_context_summary()}
-        return {'context': None}
+            return {
+                'context': state.context.get_context_summary(),
+                'active_session': get_active_session(),
+            }
+        return {'context': None, 'active_session': get_active_session()}
+
+
+@app.get('/session')
+async def get_session():
+    return {'active_session': get_active_session()}
 
 
 @app.post('/run')

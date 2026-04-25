@@ -41,3 +41,6 @@ GOOGLE_API_KEY=your_gemini_api_key
 - The backend executes the agent flow
 - Live browser screenshots are rendered when available
 - The frontend displays backend SSE logs, step progress, and final results
+- Conversation memory is now managed as one active topic session at a time
+- `POST /reset` archives the current topic and starts a clean session
+- Browser anti-bot protections are always enabled by default

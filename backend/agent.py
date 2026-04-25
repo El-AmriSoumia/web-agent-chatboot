@@ -51,14 +51,14 @@ AgentType = None
 from backend.mcp import MCPContext
 from backend.nlp import analyze_task
 from backend.rpa import RPAController
-from backend.memory import append_conversation, get_conversation_history, get_memory_context, save_session, archive_and_reset
+from backend.memory import append_conversation, ensure_topic_session, get_active_session, get_conversation_history, get_memory_context, save_session
 
 PROVIDER = os.getenv('PROVIDER', 'gemini').lower()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 PLAYWRIGHT_STALE = os.getenv('PLAYWRIGHT_STALE', 'false').lower() in ('1', 'true', 'yes')
-PLAYWRIGHT_SKIP_ANTI_BOT = os.getenv('PLAYWRIGHT_SKIP_ANTI_BOT', 'false').lower() in ('1', 'true', 'yes')
+PLAYWRIGHT_SKIP_ANTI_BOT = os.getenv('PLAYWRIGHT_SKIP_ANTI_BOT', 'true').lower() in ('1', 'true', 'yes')
 PLAYWRIGHT_USER_DATA_DIR = os.getenv('PLAYWRIGHT_USER_DATA_DIR', os.path.join(os.path.dirname(__file__), '.playwright_profile'))
 PLAYWRIGHT_USER_AGENT = os.getenv(
     'PLAYWRIGHT_USER_AGENT',
@@ -78,12 +78,20 @@ if GEMINI_API_KEY:
 DEFAULT_GEMINI_MODELS = [
     'models/gemini-2.5-flash',
 ]
+PAGE_ACTION_PREFIX = '__PAGE_ACTION__:'
 
 def _normalize_gemini_model_name(model_name: str) -> str:
     if model_name.startswith('publishers/google/models/'):
         parts = model_name.split('/')
         return 'models/' + '/'.join(parts[3:])
     return model_name
+
+
+def _extract_page_action(message: str) -> str:
+    text = (message or '').strip()
+    if text.startswith(PAGE_ACTION_PREFIX):
+        return text[len(PAGE_ACTION_PREFIX):].strip()
+    return ''
 
 
 def _get_available_gemini_models(max_models: int = 50) -> List[str]:
@@ -709,15 +717,14 @@ def _create_google_search_url(task: str) -> str:
 
 def _build_playwright_args(skip_anti_bot: bool) -> List[str]:
     args = ['--no-sandbox']
-    if skip_anti_bot:
-        args.extend([
-            '--disable-blink-features=AutomationControlled',
-            '--disable-features=IsolateOrigins,site-per-process',
-            '--disable-infobars',
-            '--disable-dev-shm-usage',
-            '--no-first-run',
-            '--no-default-browser-check',
-        ])
+    args.extend([
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-infobars',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--no-default-browser-check',
+    ])
     args.extend(PLAYWRIGHT_EXTRA_ARGS)
     return args
 
@@ -730,9 +737,9 @@ def _create_playwright_browser_page(playwright, stale: bool, skip_anti_bot: bool
             headless=headless,
             args=launch_args,
             viewport={'width': 1280, 'height': 800},
-            user_agent=PLAYWRIGHT_USER_AGENT if skip_anti_bot else None,
+            user_agent=PLAYWRIGHT_USER_AGENT,
             locale='en-US',
-            ignore_https_errors=skip_anti_bot,
+            ignore_https_errors=True,
         )
         page = browser.pages[0] if browser.pages else browser.new_page()
         return browser, page
@@ -740,10 +747,10 @@ def _create_playwright_browser_page(playwright, stale: bool, skip_anti_bot: bool
     browser = playwright.chromium.launch(headless=headless, args=launch_args)
     context = browser.new_context(
         viewport={'width': 1280, 'height': 800},
-        user_agent=PLAYWRIGHT_USER_AGENT if skip_anti_bot else None,
+        user_agent=PLAYWRIGHT_USER_AGENT,
         locale='en-US',
-        extra_http_headers={'accept-language': 'en-US,en;q=0.9'} if skip_anti_bot else None,
-        ignore_https_errors=skip_anti_bot,
+        extra_http_headers={'accept-language': 'en-US,en;q=0.9'},
+        ignore_https_errors=True,
     )
     page = context.new_page()
     return browser, page
@@ -1067,6 +1074,26 @@ def _run_playwright_sync(
             msg = entry.get('message') or entry.get('question') or ''
             append_conversation(role, msg, task=task)
 
+        def _switch_to_page_action(raw_feedback: str) -> bool:
+            nonlocal task
+            page_action = _extract_page_action(raw_feedback)
+            if not page_action:
+                return False
+            task = page_action
+            ensure_topic_session(task)
+            _persist({'type': 'user_feedback', 'message': task})
+            append_conversation('user', task, task=task)
+            conversation_history[:] = list(get_conversation_history(100))
+            active = get_active_session()
+            if active:
+                _send_event_sync(loop, send_event, {'type': 'session', 'data': active})
+            _send_event_sync(loop, send_event, {
+                'type': 'log',
+                'message': f'User redirected the agent to a different action on the current page: {task}'
+            })
+            _last_state.update({'url': None, 'text_hash': None, 'count': 0})
+            return True
+
         _DIRECT_ACTION_RE = re.compile(
             r'^(click|clique|cliquer|appuie|appuyer|press|tap|scroll|scrolle|'
             r'type|tape|remplis|fill|submit|soumet|navigate|navigue|'
@@ -1164,6 +1191,8 @@ def _run_playwright_sync(
                         return
                     if feedback_queue:
                         user_feedback = feedback_queue.pop(0)
+                        if _switch_to_page_action(user_feedback):
+                            break
                         _persist({'type': 'user_feedback', 'message': user_feedback})
                         _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User guidance: {user_feedback}'})
                         break
@@ -1180,7 +1209,10 @@ def _run_playwright_sync(
 
             # --- Handle CAPTCHA first ---
             if has_captcha and not has_user_answer:
-                question = 'CAPTCHA detected. Please solve the CAPTCHA and provide the verification code.'
+                if show_browser:
+                    question = 'CAPTCHA detected. Anti-bot mode is already enabled. Please solve the CAPTCHA in the visible browser window, then tell me "done".'
+                else:
+                    question = 'CAPTCHA detected. Anti-bot mode is already enabled, but this site still requires human verification. Please solve the CAPTCHA and provide the verification code.'
                 _persist({'type': 'agent_question', 'question': question})
                 _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': question})
                 if user_reply_event:
@@ -1191,6 +1223,8 @@ def _run_playwright_sync(
                         return
                     if feedback_queue:
                         user_feedback = feedback_queue.pop(0)
+                        if _switch_to_page_action(user_feedback):
+                            break
                         _persist({'type': 'user_feedback', 'message': user_feedback})
                         _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User solved CAPTCHA: {user_feedback}'})
                         break
@@ -1202,7 +1236,7 @@ def _run_playwright_sync(
                 item.get('type') == 'agent_question' for item in conversation_history
             )
             if form_fields and not has_user_answer:
-                all_filled = True
+                redirect_requested = False
                 for field in form_fields:
                     label = field['label']
                     selector = field['selector']
@@ -1237,6 +1271,10 @@ def _run_playwright_sync(
                                 return
                             if feedback_queue:
                                 val = feedback_queue.pop(0)
+                                if _switch_to_page_action(val):
+                                    redirect_requested = True
+                                    answered = True
+                                    break
                                 _persist({'type': 'user_feedback', 'message': val})
                                 value = val.strip()
                                 answered = True
@@ -1244,6 +1282,8 @@ def _run_playwright_sync(
                             time.sleep(0.3)
                         if not answered:
                             return
+                        if redirect_requested:
+                            break
                         # Try to fill immediately
                         try:
                             _fill_form_field(page, selector, value)
@@ -1255,6 +1295,11 @@ def _run_playwright_sync(
                             # Loop back to re-ask with error message
                             question = f'Erreur sur "{label}" ({fe}). Entrez une nouvelle valeur :'
                             value = None  # force re-ask
+                    if redirect_requested:
+                        break
+                if redirect_requested:
+                    conversation_history[:] = [e for e in conversation_history if e.get('type') not in ('agent_question', 'user_feedback')]
+                    continue
                 # All fields filled — submit
                 _send_event_sync(loop, send_event, {'type': 'step', 'name': 'SUBMIT', 'args': 'submitting form', 'status': 'running'})
                 try:
@@ -1444,6 +1489,8 @@ def _run_playwright_sync(
                             return
                         if feedback_queue:
                             user_feedback = feedback_queue.pop(0)
+                            if _switch_to_page_action(user_feedback):
+                                break
                             _persist({"type": "user_feedback", "message": user_feedback})
                             _send_event_sync(loop, send_event, {'type': 'log', 'message': f'User answered: {user_feedback}'})
                             break
@@ -1466,9 +1513,14 @@ def _run_playwright_sync(
                             return
                         if feedback_queue:
                             nxt = feedback_queue.pop(0)
-                            _persist({'type': 'user_feedback', 'message': nxt})
                             task = nxt.strip()
+                            ensure_topic_session(task)
+                            _persist({'type': 'user_feedback', 'message': task})
                             append_conversation('user', task, task=task)
+                            conversation_history[:] = list(get_conversation_history(100))
+                            active = get_active_session()
+                            if active:
+                                _send_event_sync(loop, send_event, {'type': 'session', 'data': active})
                             _last_state.update({'url': None, 'text_hash': None, 'count': 0})
                             break
                         time.sleep(0.5)
@@ -1485,9 +1537,14 @@ def _run_playwright_sync(
                             return
                         if feedback_queue:
                             nxt = feedback_queue.pop(0)
-                            _persist({'type': 'user_feedback', 'message': nxt})
                             task = nxt.strip()
+                            ensure_topic_session(task)
+                            _persist({'type': 'user_feedback', 'message': task})
                             append_conversation('user', task, task=task)
+                            conversation_history[:] = list(get_conversation_history(100))
+                            active = get_active_session()
+                            if active:
+                                _send_event_sync(loop, send_event, {'type': 'session', 'data': active})
                             _last_state.update({'url': None, 'text_hash': None, 'count': 0})
                             break
                         time.sleep(0.5)
@@ -1589,11 +1646,21 @@ async def run_agent(
     user_reply_event: Optional[Any] = None,
     show_browser: bool = False,
 ) -> MCPContext:
+    skip_anti_bot = True
+    active_session = ensure_topic_session(task)
     append_conversation('user', task, task=task)
 
     memory_ctx = get_memory_context(task, n_sessions=10, n_conv=30)
     if memory_ctx:
         await send_event({'type': 'system_context', 'message': memory_ctx})
+    await send_event({
+        'type': 'session',
+        'data': {
+            'id': active_session.get('id', ''),
+            'topic': active_session.get('topic', task),
+            'summary': active_session.get('summary', ''),
+        }
+    })
 
     nlp_result = await analyze_task(task)
     intent = nlp_result.get('intent', 'DEEP_SWEEP')
@@ -1612,9 +1679,9 @@ async def run_agent(
 
     start_url = await _get_start_url(task)
     auto_skip = _task_requires_skip_anti_bot(task)
-    if auto_skip and not skip_anti_bot:
-        skip_anti_bot = True
-        await send_event({'type': 'log', 'message': 'Anti-bot mode enabled automatically based on task text.'})
+    if auto_skip:
+        await send_event({'type': 'log', 'message': 'Anti-bot-sensitive task detected.'})
+    await send_event({'type': 'log', 'message': 'Anti-bot protections are always enabled for browser sessions.'})
 
     await send_event({'type': 'log', 'message': f'Starting at: {start_url}'})
 

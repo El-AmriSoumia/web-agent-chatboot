@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 const ASSET_IMAGE = '/gsam-bg.png'
+const PAGE_ACTION_PREFIX = '__PAGE_ACTION__:'
 
 function FeedbackInput({ question, onSubmit, onAbort }) {
   const [text, setText] = useState('')
@@ -52,6 +53,88 @@ function FeedbackInput({ question, onSubmit, onAbort }) {
         <button onClick={onAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded hover:bg-[#ffb4ab]/10">ABORT</button>
         <button onClick={() => text.trim() && onSubmit(text.trim())}
           className="flex-1 py-2 text-[10px] uppercase tracking-widest font-bold bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00] rounded">SEND</button>
+      </div>
+    </div>
+  )
+}
+
+function ActionableFeedbackInput({ question, onSubmit, onAbort }) {
+  const [text, setText] = useState('')
+  const [mode, setMode] = useState('answer')
+
+  const submitValue = (value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    onSubmit(mode === 'redirect' ? `${PAGE_ACTION_PREFIX}${trimmed}` : trimmed)
+  }
+
+  const selectMatch = question?.match(/\(options:\s*(.+?)\)\s*:?\s*$/i)
+  const selectOptions = selectMatch
+    ? selectMatch[1].split(',').map(o => o.trim()).filter(Boolean)
+    : null
+
+  if (selectOptions && selectOptions.length > 0 && mode !== 'redirect') {
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+          {selectOptions.map(opt => (
+            <button
+              key={opt}
+              onClick={() => onSubmit(opt)}
+              className="py-2.5 px-3 text-left text-sm text-white bg-white/5 border border-white/15 rounded-lg hover:bg-[#f2ca50]/20 hover:border-[#f2ca50]/50 transition-colors"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded hover:bg-[#ffb4ab]/10">ABORT</button>
+          <button
+            onClick={() => { setMode('redirect'); setText('') }}
+            className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/25 rounded hover:bg-[#60a5fa]/10"
+          >
+            AUTRE ACTION
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {mode === 'redirect' && (
+        <p className="text-[11px] text-[#60a5fa] uppercase tracking-widest">
+          Donne une autre action à faire sur la page courante
+        </p>
+      )}
+      <textarea
+        autoFocus
+        rows={3}
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey && text.trim()) {
+            e.preventDefault()
+            submitValue(text)
+          }
+        }}
+        className={`w-full rounded px-3 py-2 text-sm text-white focus:outline-none resize-none placeholder:text-white/40 ${mode === 'redirect' ? 'bg-white/10 border border-[#60a5fa]/30 focus:border-[#60a5fa]/70' : 'bg-white/10 border border-white/20 focus:border-[#f2ca50]/60'}`}
+        placeholder={mode === 'redirect' ? 'Ex: ouvre le menu, clique sur retour, cherche un autre bouton...' : 'Votre réponse... (Enter pour envoyer)'}
+      />
+      <div className="flex gap-2">
+        <button onClick={onAbort} className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#ffb4ab] border border-[#ffb4ab]/20 rounded hover:bg-[#ffb4ab]/10">ABORT</button>
+        <button
+          onClick={() => { setMode(mode === 'redirect' ? 'answer' : 'redirect'); setText('') }}
+          className="flex-1 py-2 text-[10px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/25 rounded hover:bg-[#60a5fa]/10"
+        >
+          {mode === 'redirect' ? 'RÉPONSE NORMALE' : 'AUTRE ACTION'}
+        </button>
+        <button
+          onClick={() => submitValue(text)}
+          className={`flex-1 py-2 text-[10px] uppercase tracking-widest font-bold rounded ${mode === 'redirect' ? 'bg-gradient-to-r from-[#60a5fa] to-[#3b82f6] text-white' : 'bg-gradient-to-r from-[#f2ca50] to-[#d4af37] text-[#3d2f00]'}`}
+        >
+          {mode === 'redirect' ? 'ENVOYER ACTION' : 'SEND'}
+        </button>
       </div>
     </div>
   )
@@ -122,6 +205,8 @@ export default function App() {
   const [agentStatus, setAgentStatus] = useState('idle')
   const [messages, setMessages] = useState([])
   const [currentUrl, setCurrentUrl] = useState('')
+  const [currentTopic, setCurrentTopic] = useState('')
+  const [sessionSummary, setSessionSummary] = useState('')
   const [lastScreenshot, setLastScreenshot] = useState(null)
   const [feedbackQuestion, setFeedbackQuestion] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
@@ -165,6 +250,10 @@ export default function App() {
         break
       case 'url':
         setCurrentUrl(event.value || '')
+        break
+      case 'session':
+        setCurrentTopic(event.data?.topic || '')
+        setSessionSummary(event.data?.summary || '')
         break
       case 'step':
         setMessages(prev => {
@@ -220,6 +309,8 @@ export default function App() {
 
     setMessages([])
     setCurrentUrl('')
+    setCurrentTopic('')
+    setSessionSummary('')
     setLastScreenshot(null)
     setAgentStatus('executing')
     addMsg({ type: 'user', text: task, time: new Date().toTimeString().slice(0, 8) })
@@ -289,6 +380,8 @@ export default function App() {
     await fetch(`${backendUrl}/reset`, { method: 'POST' }).catch(() => {})
     setMessages([])
     setCurrentUrl('')
+    setCurrentTopic('')
+    setSessionSummary('')
     setLastScreenshot(null)
     setShowFeedback(false)
     setShowSafety(false)
@@ -334,6 +427,14 @@ export default function App() {
             <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: statusColor }}>
               {agentStatus.toUpperCase()}
             </span>
+            {currentTopic && (
+              <span
+                className="max-w-[18rem] truncate text-[9px] uppercase tracking-[0.25em] text-white/55 border border-white/10 rounded-full px-3 py-1"
+                title={sessionSummary || currentTopic}
+              >
+                {currentTopic}
+              </span>
+            )}
           </div>
 
           {/* LOGO + TITLE */}
@@ -465,7 +566,7 @@ export default function App() {
               <p className="text-[11px] uppercase tracking-widest font-bold text-[#f2ca50]">L'agent demande</p>
             </div>
             <p className="text-sm text-white/80 mb-4">{feedbackQuestion.replace(/\s*\(options:[^)]+\)/i, '')}</p>
-            <FeedbackInput question={feedbackQuestion} onSubmit={handleFeedback} onAbort={handleAbort} />
+            <ActionableFeedbackInput question={feedbackQuestion} onSubmit={handleFeedback} onAbort={handleAbort} />
           </div>
         </div>
       )}

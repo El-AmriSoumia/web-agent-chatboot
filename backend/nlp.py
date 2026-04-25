@@ -66,7 +66,7 @@ def _parse_json_safe(text: str) -> dict:
 
 async def analyze_task(text: str) -> Dict:
     from backend.memory import get_recent_sessions
-    sessions = get_recent_sessions(5)
+    sessions = get_recent_sessions(5, include_active=True)
     if sessions:
         history_lines = []
         for s in reversed(sessions):

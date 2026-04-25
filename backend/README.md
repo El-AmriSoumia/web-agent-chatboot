@@ -35,6 +35,9 @@ From the ROOT of the project (not inside backend/):
 - The `/run` endpoint streams progress events over Server-Sent Events (SSE).
 - If the client disconnects, the backend closes the SSE stream and clears the current agent state.
 - When the agent believes an action is risky, it sends a safety event and waits up to 30 seconds for `/confirm`.
+- Memory is scoped to one active topic session; previous topics are archived on `/reset` or when a clearly new topic starts.
+- `GET /session` returns the active topic session metadata and summary.
+- Anti-bot browser protections are always enabled; some sites may still require a manual CAPTCHA solve.
 
 ## Common errors
 - "GEMINI_API_KEY is not set" → create backend/.env with your key

@@ -6,3 +6,5 @@ langchain==1.2.15
 langchain-google-genai==4.2.1
 python-dotenv==1.0.0
 Pillow==12.2.0
+psycopg[binary]==3.2.13
+bcrypt==4.2.1

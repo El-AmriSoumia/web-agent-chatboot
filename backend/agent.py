@@ -52,12 +52,13 @@ from backend.mcp import MCPContext
 from backend.nlp import analyze_task
 from backend.rpa import RPAController
 from backend.memory import append_conversation, ensure_topic_session, get_active_session, get_conversation_history, get_memory_context, save_session
+from backend.conversational_agent import is_conversational_question, answer_conversational_question
 
 PROVIDER = os.getenv('PROVIDER', 'gemini').lower()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-PLAYWRIGHT_STALE = os.getenv('PLAYWRIGHT_STALE', 'false').lower() in ('1', 'true', 'yes')
+PLAYWRIGHT_STALE = os.getenv('PLAYWRIGHT_STALE', 'true').lower() in ('1', 'true', 'yes')
 PLAYWRIGHT_SKIP_ANTI_BOT = os.getenv('PLAYWRIGHT_SKIP_ANTI_BOT', 'true').lower() in ('1', 'true', 'yes')
 PLAYWRIGHT_USER_DATA_DIR = os.getenv('PLAYWRIGHT_USER_DATA_DIR', os.path.join(os.path.dirname(__file__), '.playwright_profile'))
 PLAYWRIGHT_USER_AGENT = os.getenv(
@@ -1066,6 +1067,7 @@ def _run_playwright_sync(
 
         # --- Stuck-loop detection state ---
         _last_state: Dict[str, Any] = {'url': None, 'text_hash': None, 'count': 0}
+        _skip_form_once = False  # set True after AUTRE ACTION to bypass form detection
 
         def _persist(entry: Dict) -> None:
             """Append to RAM + disk simultaneously."""
@@ -1106,23 +1108,21 @@ def _run_playwright_sync(
             return bool(_DIRECT_ACTION_RE.match(instruction.strip()))
 
         def _is_google_search_page(url: str) -> bool:
-            return 'google.com/search' in url or 'bing.com/search' in url
+            return 'google.com/search' in url or 'google.com/sorry' in url
 
         def _click_first_search_result(page) -> bool:
-            try:
-                if page.locator('a h3').count() > 0:
-                    page.locator('a h3').first.click(timeout=8000)
-                    page.wait_for_load_state('domcontentloaded', timeout=10000)
-                    return True
-            except Exception:
-                pass
-            try:
-                if page.locator('div#search a h3').count() > 0:
-                    page.locator('div#search a h3').first.click(timeout=8000)
-                    page.wait_for_load_state('domcontentloaded', timeout=10000)
-                    return True
-            except Exception:
-                pass
+            # Google + Bing result selectors
+            for selector in [
+                'a h3', 'div#search a h3',
+                '#b_results h2 a', '.b_algo h2 a', 'li.b_algo a h2',
+            ]:
+                try:
+                    if page.locator(selector).count() > 0:
+                        page.locator(selector).first.click(timeout=8000)
+                        page.wait_for_load_state('domcontentloaded', timeout=10000)
+                        return True
+                except Exception:
+                    pass
             return False
 
         def _force_google_query(task: str, page) -> bool:
@@ -1147,6 +1147,34 @@ def _run_playwright_sync(
             if abort_event and abort_event.is_set():
                 _send_event_sync(loop, send_event, {'type': 'log', 'message': 'Abort requested during execution.'})
                 return
+
+            # Check if this is a conversational question
+            if is_conversational_question(task):
+                answer = answer_conversational_question(task, conversation_history)
+                _persist({'type': 'agent_question', 'question': answer})
+                _send_event_sync(loop, send_event, {'type': 'ask_user', 'question': answer})
+                if user_reply_event:
+                    user_reply_event.clear()
+                deadline = time.time() + 300
+                while time.time() < deadline:
+                    if abort_event and abort_event.is_set():
+                        return
+                    if feedback_queue:
+                        nxt = feedback_queue.pop(0)
+                        task = nxt.strip()
+                        ensure_topic_session(task)
+                        _persist({'type': 'user_feedback', 'message': task})
+                        append_conversation('user', task, task=task)
+                        conversation_history[:] = list(get_conversation_history(100))
+                        active = get_active_session()
+                        if active:
+                            _send_event_sync(loop, send_event, {'type': 'session', 'data': active})
+                        _last_state.update({'url': None, 'text_hash': None, 'count': 0})
+                        break
+                    time.sleep(0.3)
+                else:
+                    return
+                continue
 
             if _is_google_search_page(page.url):
                 if _click_first_search_result(page):
@@ -1235,6 +1263,9 @@ def _run_playwright_sync(
             already_asked = any(
                 item.get('type') == 'agent_question' for item in conversation_history
             )
+            if _skip_form_once:
+                _skip_form_once = False
+                form_fields = []
             if form_fields and not has_user_answer:
                 redirect_requested = False
                 for field in form_fields:
@@ -1299,6 +1330,7 @@ def _run_playwright_sync(
                         break
                 if redirect_requested:
                     conversation_history[:] = [e for e in conversation_history if e.get('type') not in ('agent_question', 'user_feedback')]
+                    _skip_form_once = True
                     continue
                 # All fields filled — submit
                 _send_event_sync(loop, send_event, {'type': 'step', 'name': 'SUBMIT', 'args': 'submitting form', 'status': 'running'})
@@ -1572,8 +1604,7 @@ def _run_playwright_sync(
             skip_anti_bot=skip_anti_bot or PLAYWRIGHT_SKIP_ANTI_BOT,
             headless=not show_browser,
         )
-        if skip_anti_bot or PLAYWRIGHT_SKIP_ANTI_BOT:
-            _apply_anti_bot_page_settings(page)
+        _apply_anti_bot_page_settings(page)  # always apply JS shim
 
         try:
             try:
@@ -1646,7 +1677,7 @@ async def run_agent(
     user_reply_event: Optional[Any] = None,
     show_browser: bool = False,
 ) -> MCPContext:
-    skip_anti_bot = True
+    skip_anti_bot = False
     active_session = ensure_topic_session(task)
     append_conversation('user', task, task=task)
 

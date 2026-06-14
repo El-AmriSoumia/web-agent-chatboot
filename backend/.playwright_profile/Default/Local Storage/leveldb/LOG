@@ -1,3 +1,24 @@
-2026/05/08-21:37:08.437 4680 Reusing MANIFEST C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/MANIFEST-000001
-2026/05/08-21:37:08.461 4680 Recovering log #9
-2026/05/08-21:37:08.462 4680 Reusing old log C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/000009.log 
+2026/05/14-23:08:57.781 318c Reusing MANIFEST C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/05/14-23:08:57.796 318c Recovering log #100
+2026/05/14-23:08:57.797 318c Reusing old log C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/000100.log 
+2026/05/14-23:09:07.319 2054 Level-0 table #103: started
+2026/05/14-23:09:07.335 2054 Level-0 table #103: 79607 bytes OK
+2026/05/14-23:09:07.340 2054 Delete type=0 #100
+2026/05/14-23:09:07.366 318c Compacting 4@0 + 1@1 files
+2026/05/14-23:09:07.503 318c Generated table #104@0: 140 keys, 2114982 bytes
+2026/05/14-23:09:07.518 318c Generated table #105@0: 412 keys, 51024 bytes
+2026/05/14-23:09:07.518 318c Compacted 4@0 + 1@1 files => 2166006 bytes
+2026/05/14-23:09:07.523 318c compacted to: files[ 0 2 1 0 0 0 0 ]
+2026/05/14-23:09:07.525 318c Delete type=2 #91
+2026/05/14-23:09:07.525 318c Delete type=2 #94
+2026/05/14-23:09:07.525 318c Delete type=2 #97
+2026/05/14-23:09:07.526 318c Delete type=2 #99
+2026/05/14-23:09:07.526 318c Delete type=2 #103
+2026/05/14-23:09:57.817 318c Level-0 table #107: started
+2026/05/14-23:09:57.861 318c Level-0 table #107: 111454 bytes OK
+2026/05/14-23:09:57.866 318c Delete type=0 #102
+2026/05/14-23:10:27.628 318c Level-0 table #109: started
+2026/05/14-23:10:28.289 318c Level-0 table #109: 77321 bytes OK
+2026/05/14-23:10:28.299 318c Delete type=0 #106
+2026/05/14-23:10:58.093 4788 Level-0 table #111: started
+2026/05/14-23:10:58.117 4788 Level-0 table #111: 108898 bytes OK

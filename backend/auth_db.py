@@ -21,6 +21,19 @@ _database_url = os.getenv("DATABASE_URL")
 if not _database_url:
     raise RuntimeError("DATABASE_URL is not defined in .env")
 
+_DB_CONNECT_TIMEOUT_SECONDS = int(os.getenv("DB_CONNECT_TIMEOUT_SECONDS", "5"))
+_DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "10000"))
+
+
+def _connect_options(extra: Optional[dict] = None) -> dict:
+    options = {
+        "connect_timeout": _DB_CONNECT_TIMEOUT_SECONDS,
+        "options": f"-c statement_timeout={_DB_STATEMENT_TIMEOUT_MS}",
+    }
+    if extra:
+        options.update(extra)
+    return options
+
 
 def _now():
     return datetime.now(timezone.utc)
@@ -45,7 +58,7 @@ def _json_load(value, default=None):
 
 
 def get_conn():
-    return psycopg.connect(_database_url, row_factory=dict_row)
+    return psycopg.connect(_database_url, row_factory=dict_row, **_connect_options())
 
 
 def ensure_database_exists():
@@ -57,7 +70,7 @@ def ensure_database_exists():
     maintenance = dict(url)
     maintenance["dbname"] = "postgres"
     try:
-        with psycopg.connect(**maintenance, autocommit=True) as conn:
+        with psycopg.connect(**maintenance, autocommit=True, **_connect_options()) as conn:
             exists = conn.execute(
                 "SELECT 1 FROM pg_database WHERE datname = %s",
                 (database_name,),
@@ -102,10 +115,24 @@ def ensure_schema():
             )
         """)
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS agent (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                "userId" UUID NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                "systemContext" TEXT NOT NULL,
+                "isActive" BOOLEAN DEFAULT TRUE,
+                metadata JSONB DEFAULT '{}'::JSONB,
+                "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+                "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "sessionId" VARCHAR(255) UNIQUE NOT NULL,
                 "userId" UUID NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+                "agentId" UUID NULL REFERENCES agent(id) ON UPDATE CASCADE ON DELETE SET NULL,
                 task TEXT NOT NULL,
                 "toolsUsed" TEXT[] DEFAULT ARRAY[]::TEXT[],
                 status enum_sessions_status DEFAULT 'pending',
@@ -120,6 +147,7 @@ def ensure_schema():
             )
         """)
         # Migrate existing DBs
+        conn.execute('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "agentId" UUID NULL REFERENCES agent(id) ON UPDATE CASCADE ON DELETE SET NULL')
         conn.execute('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "lastUrl" TEXT DEFAULT NULL')
         conn.execute('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "lastScreenshot" TEXT DEFAULT NULL')
         conn.execute("""
@@ -139,6 +167,7 @@ def ensure_schema():
             )
         """)
         conn.execute('CREATE INDEX IF NOT EXISTS messages_session_timestamp_idx ON messages ("sessionId", timestamp)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_agent_user_active ON agent("userId", "isActive")')
         
         # Tables pour les workflows générés
         conn.execute("""
@@ -191,7 +220,13 @@ def ensure_schema():
         
         conn.execute('CREATE INDEX IF NOT EXISTS idx_workflow_prompt ON generated_workflows("promptPattern")')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_workflow_user ON generated_workflows("userId", "isActive")')
+        conn.execute('ALTER TABLE workflow_actions ADD COLUMN IF NOT EXISTS selector TEXT')
+        conn.execute('ALTER TABLE workflow_actions ADD COLUMN IF NOT EXISTS "pageUrl" TEXT')
+        conn.execute('ALTER TABLE workflow_actions ADD COLUMN IF NOT EXISTS success BOOLEAN DEFAULT TRUE')
+        conn.execute('ALTER TABLE workflow_actions ADD COLUMN IF NOT EXISTS "errorMessage" TEXT')
+        conn.execute('ALTER TABLE workflow_actions ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ DEFAULT NOW()')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_actions_workflow ON workflow_actions("workflowId", "stepNumber")')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_actions_page_url ON workflow_actions("pageUrl")')
         
         conn.commit()
 
@@ -286,6 +321,8 @@ def public_session(session: dict, last_message: Optional[dict] = None) -> dict:
     return {
         "id": session.get("sessionId", ""),
         "task": session.get("task", ""),
+        "agentId": str(session.get("agentId")) if session.get("agentId") else None,
+        "agentName": session.get("agentName") or session.get("agent_name") or None,
         "status": session.get("status", "pending"),
         "toolsUsed": session.get("toolsUsed", []),
         "result": _json_load(session.get("result")),
@@ -295,6 +332,19 @@ def public_session(session: dict, last_message: Optional[dict] = None) -> dict:
         "endedAt": _json_date(session.get("endedAt")),
         "lastMessage": last_message.get("content", "") if last_message else "",
         "lastMessageAt": _json_date(last_message.get("timestamp")) if last_message else _json_date(session.get("startedAt")),
+    }
+
+
+def public_agent(agent_row: dict) -> dict:
+    return {
+        "id": str(agent_row["id"]),
+        "name": agent_row.get("name", ""),
+        "description": agent_row.get("description", ""),
+        "systemContext": agent_row.get("systemContext", ""),
+        "isActive": agent_row.get("isActive", True),
+        "metadata": _json_load(agent_row.get("metadata"), {}),
+        "createdAt": _json_date(agent_row.get("createdAt")),
+        "updatedAt": _json_date(agent_row.get("updatedAt")),
     }
 
 
@@ -348,15 +398,90 @@ def find_user_by_id(user_id: str) -> Optional[dict]:
         ).fetchone()
 
 
-def create_agent_session(user: dict, task: str, tools_used=None) -> dict:
+def create_agent(user_id: str, name: str, description: str, system_context: str) -> dict:
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO agent (id, "userId", name, description, "systemContext", "createdAt", "updatedAt")
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING *
+            """,
+            (str(uuid4()), user_id, name.strip(), description.strip(), system_context.strip(), _now(), _now()),
+        ).fetchone()
+        conn.commit()
+        return row
+
+
+def get_user_agents(user_id: str) -> list[dict]:
+    with get_conn() as conn:
+        return conn.execute(
+            'SELECT * FROM agent WHERE "userId" = %s AND "isActive" = TRUE ORDER BY "updatedAt" DESC',
+            (user_id,),
+        ).fetchall()
+
+
+def get_agent_by_id(agent_id: str, user_id: str, include_inactive: bool = False) -> Optional[dict]:
+    active_clause = '' if include_inactive else ' AND "isActive" = TRUE'
+    with get_conn() as conn:
+        return conn.execute(
+            f'SELECT * FROM agent WHERE id = %s AND "userId" = %s{active_clause}',
+            (agent_id, user_id),
+        ).fetchone()
+
+
+def update_agent(agent_id: str, user_id: str, fields: dict) -> Optional[dict]:
+    allowed = {
+        "name": "name",
+        "description": "description",
+        "systemContext": '"systemContext"',
+        "metadata": "metadata",
+    }
+    updates, values = [], []
+    for key, column in allowed.items():
+        if key not in fields:
+            continue
+        value = fields[key]
+        if value is None:
+            continue
+        if key == "metadata":
+            updates.append(f"{column} = %s::jsonb")
+            values.append(_json_dump(value))
+        else:
+            updates.append(f"{column} = %s")
+            values.append(str(value).strip())
+    if not updates:
+        return get_agent_by_id(agent_id, user_id)
+    updates.append('"updatedAt" = %s')
+    values.append(_now())
+    values.extend([agent_id, user_id])
+    with get_conn() as conn:
+        row = conn.execute(
+            f'UPDATE agent SET {", ".join(updates)} WHERE id = %s AND "userId" = %s AND "isActive" = TRUE RETURNING *',
+            values,
+        ).fetchone()
+        conn.commit()
+        return row
+
+
+def delete_agent(agent_id: str, user_id: str) -> bool:
+    with get_conn() as conn:
+        row = conn.execute(
+            'UPDATE agent SET "isActive" = FALSE, "updatedAt" = %s WHERE id = %s AND "userId" = %s AND "isActive" = TRUE RETURNING id',
+            (_now(), agent_id, user_id),
+        ).fetchone()
+        conn.commit()
+        return bool(row)
+
+
+def create_agent_session(user: dict, task: str, agent_id=None, tools_used=None) -> dict:
     with get_conn() as conn:
         session = conn.execute(
             """
-            INSERT INTO sessions (id, "sessionId", "userId", task, "toolsUsed", status)
-            VALUES (%s, %s, %s, %s, %s, 'running')
+            INSERT INTO sessions (id, "sessionId", "userId", "agentId", task, "toolsUsed", status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'running')
             RETURNING *
             """,
-            (str(uuid4()), str(uuid4()), user["id"], task, tools_used or []),
+            (str(uuid4()), str(uuid4()), user["id"], agent_id, task, tools_used or []),
         ).fetchone()
         conn.commit()
         return session
@@ -365,9 +490,13 @@ def create_agent_session(user: dict, task: str, tools_used=None) -> dict:
 def get_user_sessions(user: dict) -> list[dict]:
     with get_conn() as conn:
         sessions = conn.execute(
-            '''SELECT id, "sessionId", "userId", task, "toolsUsed", status, result, 
-               "urlsVisited", "formsFilled", "lastUrl", "startedAt", "endedAt", metadata 
-               FROM sessions WHERE "userId" = %s ORDER BY "startedAt" DESC''',
+            '''SELECT s.id, s."sessionId", s."userId", s."agentId", a.name AS "agentName",
+               s.task, s."toolsUsed", s.status, s.result, s."urlsVisited", s."formsFilled",
+               s."lastUrl", s."startedAt", s."endedAt", s.metadata
+               FROM sessions s
+               LEFT JOIN agent a ON a.id = s."agentId"
+               WHERE s."userId" = %s
+               ORDER BY s."startedAt" DESC''',
             (user["id"],),
         ).fetchall()
         result = []
@@ -383,7 +512,11 @@ def get_user_sessions(user: dict) -> list[dict]:
 def get_session_for_user(user: dict, session_id: str) -> Optional[dict]:
     with get_conn() as conn:
         return conn.execute(
-            'SELECT * FROM sessions WHERE "sessionId" = %s AND "userId" = %s',
+            '''SELECT s.*, a.name AS "agentName", a.description AS "agentDescription",
+               a."systemContext" AS "agentSystemContext"
+               FROM sessions s
+               LEFT JOIN agent a ON a.id = s."agentId"
+               WHERE s."sessionId" = %s AND s."userId" = %s''',
             (session_id, user["id"]),
         ).fetchone()
 

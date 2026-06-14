@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import threading
+import time
 from typing import Optional
 
 if os.name == 'nt':
@@ -18,20 +19,26 @@ from pydantic import BaseModel
 from backend.agent import run_agent
 from backend.auth_db import (
     close_agent_session,
+    create_agent,
     create_agent_session,
     create_token,
+    delete_agent,
     find_user_by_id,
+    get_agent_by_id,
     get_latest_running_session,
     get_session_for_user,
     get_session_messages_for_user,
+    get_user_agents,
     get_user_sessions,
     login_user,
     mark_agent_session_running,
+    public_agent,
     public_session,
     public_user,
     register_user,
     save_agent_message,
     save_screenshot,
+    update_agent,
     get_last_screenshot,
     update_session_page_state,
     verify_token,
@@ -50,6 +57,7 @@ app.add_middleware(
 
 class RunRequest(BaseModel):
     task: str
+    agent_id: Optional[str] = None
     session_id: Optional[str] = None
     stale_browser: bool = False
     skip_anti_bot: bool = False
@@ -57,6 +65,16 @@ class RunRequest(BaseModel):
 
 class FeedbackRequest(BaseModel):
     message: str
+
+class AgentCreateRequest(BaseModel):
+    name: str
+    description: str
+    systemContext: str
+
+class AgentUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    systemContext: Optional[str] = None
 
 class AuthRequest(BaseModel):
     email: str
@@ -162,6 +180,50 @@ async def get_session_screenshots_endpoint(session_id: str, user=Depends(get_cur
     return {'screenshots': screenshots}
 
 
+@app.get('/agents')
+async def list_agents(user=Depends(get_current_user)):
+    return {'agents': [public_agent(agent) for agent in get_user_agents(user['id'])]}
+
+
+@app.post('/agents')
+async def create_agent_endpoint(body: AgentCreateRequest, user=Depends(get_current_user)):
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail='Le nom est obligatoire')
+    if not body.description.strip():
+        raise HTTPException(status_code=400, detail='La description est obligatoire')
+    if not body.systemContext.strip():
+        raise HTTPException(status_code=400, detail='Le contexte systeme est obligatoire')
+    agent = create_agent(user['id'], body.name, body.description, body.systemContext)
+    return {'agent': public_agent(agent)}
+
+
+@app.get('/agents/{agent_id}')
+async def get_agent_endpoint(agent_id: str, user=Depends(get_current_user)):
+    agent = get_agent_by_id(agent_id, user['id'])
+    if not agent:
+        raise HTTPException(status_code=404, detail='Agent introuvable')
+    return {'agent': public_agent(agent)}
+
+
+@app.patch('/agents/{agent_id}')
+async def update_agent_endpoint(agent_id: str, body: AgentUpdateRequest, user=Depends(get_current_user)):
+    fields = body.dict(exclude_unset=True)
+    for key in ('name', 'description', 'systemContext'):
+        if key in fields and not str(fields[key]).strip():
+            raise HTTPException(status_code=400, detail=f'{key} ne peut pas etre vide')
+    agent = update_agent(agent_id, user['id'], fields)
+    if not agent:
+        raise HTTPException(status_code=404, detail='Agent introuvable')
+    return {'agent': public_agent(agent)}
+
+
+@app.delete('/agents/{agent_id}')
+async def delete_agent_endpoint(agent_id: str, user=Depends(get_current_user)):
+    if not delete_agent(agent_id, user['id']):
+        raise HTTPException(status_code=404, detail='Agent introuvable')
+    return {'status': 'deleted', 'agent_id': agent_id}
+
+
 @app.get('/context')
 async def get_context():
     async with state.lock:
@@ -191,13 +253,25 @@ async def run(request: Request, body: RunRequest, user=Depends(get_current_user)
         state.user_reply_event = threading.Event()
 
     queue: asyncio.Queue = asyncio.Queue()
+    selected_agent = None
+    start_time = time.time()
     if body.session_id:
         mongo_session = get_session_for_user(user, body.session_id)
         if not mongo_session:
             raise HTTPException(status_code=404, detail='Session introuvable')
         mark_agent_session_running(mongo_session)
+        if mongo_session.get('agentId'):
+            selected_agent = {
+                'name': mongo_session.get('agentName') or '',
+                'description': mongo_session.get('agentDescription') or '',
+                'systemContext': mongo_session.get('agentSystemContext') or '',
+            }
     else:
-        mongo_session = create_agent_session(user, body.task)
+        if body.agent_id:
+            selected_agent = get_agent_by_id(body.agent_id, user['id'])
+            if not selected_agent:
+                raise HTTPException(status_code=404, detail='Agent introuvable')
+        mongo_session = create_agent_session(user, body.task, agent_id=body.agent_id if selected_agent else None)
     save_agent_message(mongo_session, user, 'user', body.task)
 
     current_url_holder = ['']  # mutable container to track current URL in closure
@@ -212,11 +286,16 @@ async def run(request: Request, body: RunRequest, user=Depends(get_current_user)
                  if tool in f"{data.get('name', '')} {data.get('args', '')}".lower()),
                 None,
             )
+            step_content = json.dumps({
+                'action': data.get('name'),
+                'args': data.get('args'),
+                'status': data.get('status'),
+            }, ensure_ascii=False)
             save_agent_message(
                 mongo_session,
                 user,
                 'agent',
-                data.get('name') or data.get('args') or 'Agent step',
+                step_content,
                 'action',
                 generated_by,
             )
@@ -254,9 +333,21 @@ async def run(request: Request, body: RunRequest, user=Depends(get_current_user)
                 feedback_queue=state.feedback_queue,
                 user_reply_event=state.user_reply_event,
                 show_browser=body.show_browser,
+                agent_context=selected_agent.get('systemContext') if selected_agent else None,
+                agent_name=selected_agent.get('name') if selected_agent else None,
+                agent_description=selected_agent.get('description') if selected_agent else None,
+                agent_id=str(selected_agent.get('id') or mongo_session.get('agentId')) if selected_agent else None,
+                user_id=str(user['id']),
             )
             close_agent_session(mongo_session, 'completed')
             print("BACKEND: Agent completed successfully")
+            elapsed_time = time.time() - start_time
+            await queue.put({
+                'type': 'execution_time',
+                'elapsed_seconds': round(elapsed_time, 2),
+                'elapsed_formatted': f"{int(elapsed_time // 60)}m {int(elapsed_time % 60)}s"
+            })
+            await queue.put({'type': 'done'})
         except asyncio.CancelledError:
             print("BACKEND: Agent cancelled")
             close_agent_session(mongo_session, 'failed')

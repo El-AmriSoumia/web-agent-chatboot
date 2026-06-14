@@ -1,3 +1,5 @@
-2026/05/08-21:23:54.196 360c Reusing MANIFEST C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/MANIFEST-000001
-2026/05/08-21:23:54.287 360c Recovering log #9
-2026/05/08-21:23:54.291 360c Reusing old log C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/000009.log 
+2026/05/14-23:01:50.677 2008 Reusing MANIFEST C:\Users\Elite\web-agent-chatboot\backend\.playwright_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/05/14-23:01:50.707 2008 Recovering log #96
+2026/05/14-23:01:50.761 2008 Level-0 table #99: started
+2026/05/14-23:01:50.976 2008 Level-0 table #99: 1238915 bytes OK
+2026/05/14-23:01:50.988 2008 Delete type=0 #96

@@ -68,6 +68,77 @@ def find_matching_workflow(user_id: str, prompt: str) -> Optional[Dict]:
     return None
 
 
+def find_matching_action_memory(user_id: str, prompt: str, page_url: str = None) -> Optional[Dict]:
+    """Find a lightweight action-memory workflow for the same task or page."""
+    normalized = normalize_prompt(prompt)
+    page_host = _host(page_url)
+
+    with get_conn() as conn:
+        workflows = conn.execute(
+            '''SELECT w.*, COUNT(a.id) AS action_count, MAX(a."createdAt") AS last_action_at
+               FROM generated_workflows w
+               LEFT JOIN workflow_actions a ON w.id = a."workflowId"
+               WHERE w."userId" = %s
+                 AND w."isActive" = TRUE
+                 AND COALESCE(w.parameters->>'kind', '') = 'action_memory'
+               GROUP BY w.id
+               ORDER BY COALESCE(MAX(a."createdAt"), w."updatedAt") DESC
+               LIMIT 25''',
+            (user_id,)
+        ).fetchall()
+
+    best = None
+    best_score = 0.0
+    for workflow in workflows:
+        parameters = _json_load(workflow.get('parameters'), {})
+        pattern = workflow.get('promptPattern', '')
+        score = _calculate_similarity(pattern, normalized) if pattern else 0.0
+        if page_host and page_host == _host(parameters.get('start_url')):
+            score = max(score, 0.72)
+        if workflow.get('action_count', 0) and score > best_score:
+            best = dict(workflow)
+            best_score = score
+
+    return best if best_score >= 0.7 else None
+
+
+def get_or_create_action_memory_workflow(user_id: str, prompt: str, start_url: str = None) -> Dict:
+    """Create or reuse a lightweight workflow used only for action replay memory."""
+    normalized_pattern = normalize_prompt(prompt)
+    existing = find_matching_action_memory(user_id, prompt, start_url)
+    if existing and existing.get('promptPattern') == normalized_pattern:
+        return existing
+
+    workflow_id = str(uuid4())
+    workflow_name = f'Action memory: {prompt[:80]}'
+    parameters = {
+        'kind': 'action_memory',
+        'start_url': start_url or '',
+    }
+
+    with get_conn() as conn:
+        workflow = conn.execute(
+            '''INSERT INTO generated_workflows
+               (id, "userId", "workflowName", "promptPattern", "scriptCode", parameters,
+                "filePath", "createdAt", "updatedAt", "isActive")
+               VALUES (%s, %s, %s, %s, %s, %s::jsonb, NULL, %s, %s, TRUE)
+               RETURNING *''',
+            (
+                workflow_id,
+                user_id,
+                workflow_name,
+                normalized_pattern,
+                '# action-memory workflow; no generated script',
+                _json_dump(parameters),
+                _now(),
+                _now(),
+            )
+        ).fetchone()
+        conn.commit()
+
+    return dict(workflow)
+
+
 def _calculate_similarity(pattern: str, prompt: str) -> float:
     """Calcule la similarité entre deux chaînes."""
     pattern_words = set(pattern.split())
@@ -80,6 +151,16 @@ def _calculate_similarity(pattern: str, prompt: str) -> float:
     union = pattern_words | prompt_words
     
     return len(intersection) / len(union)
+
+
+def _host(url: str = None) -> str:
+    if not url:
+        return ''
+    try:
+        from urllib.parse import urlparse
+        return (urlparse(url).netloc or '').lower().removeprefix('www.')
+    except Exception:
+        return ''
 
 
 def create_workflow(
@@ -173,6 +254,7 @@ def get_workflow_actions(workflow_id: str) -> List[Dict]:
             'inputValue': action.get('inputValue'),
             'success': action.get('success', True),
             'errorMessage': action.get('errorMessage'),
+            'createdAt': _json_date(action.get('createdAt')),
         }
         for action in actions
     ]

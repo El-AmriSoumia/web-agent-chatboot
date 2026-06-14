@@ -23,8 +23,22 @@ class RPAController:
             pass
 
     def _log_action(self, action: str, details: Dict[str, Any]) -> None:
-        self.mcp_context.add_action(action, details)
+        self.mcp_context.add_action(action, {
+            **details,
+            'url': getattr(self.page, 'url', ''),
+            'status': 'running',
+        })
         self._send_event({'type': 'step', 'name': action.upper(), 'args': details, 'status': 'running'})
+
+    def _log_action_result(self, action: str, details: Dict[str, Any], status: str, error: str = None) -> None:
+        entry = {
+            **details,
+            'url': getattr(self.page, 'url', ''),
+            'status': status,
+        }
+        if error:
+            entry['error'] = error
+        self.mcp_context.add_action(action, entry)
 
     def _human_type(self, selector: str, text: str) -> None:
         """Type text character by character with human-like delays."""
@@ -149,6 +163,7 @@ class RPAController:
             element = self.page.locator(selector).first
             element.scroll_into_view_if_needed()
             element.click(timeout=5000)
+            self._log_action_result('click', {'selector': selector}, 'success')
             self._send_event({'type': 'log', 'message': f'Clicked selector {selector}'})
             self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
             return f'Clicked {selector}'
@@ -157,6 +172,7 @@ class RPAController:
                 element = self.page.get_by_text(selector, exact=False).first
                 element.scroll_into_view_if_needed()
                 element.click(timeout=5000)
+                self._log_action_result('click', {'selector': selector}, 'success')
                 self._send_event({'type': 'log', 'message': f'Clicked text {selector}'})
                 self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
                 return f'Clicked text {selector}'
@@ -165,11 +181,13 @@ class RPAController:
                     element = self.page.get_by_role('button', name=selector)
                     element.scroll_into_view_if_needed()
                     element.click(timeout=5000)
+                    self._log_action_result('click', {'selector': selector}, 'success')
                     self._send_event({'type': 'log', 'message': f'Clicked role button {selector}'})
                     self._send_event({'type': 'step', 'name': 'CLICK', 'args': selector, 'status': 'done'})
                     return f'Clicked role button {selector}'
                 except Exception as exc:
                     message = f'Click failed on "{selector}": {exc}'
+                    self._log_action_result('click', {'selector': selector}, 'error', str(exc))
                     self.mcp_context.add_error(message, {'selector': selector})
                     self._send_event({'type': 'error', 'message': message})
                     return message
@@ -180,11 +198,13 @@ class RPAController:
             self._human_type(selector, text)
             self.page.keyboard.press('Enter')
             self.page.wait_for_load_state('domcontentloaded', timeout=8000)
+            self._log_action_result('type', {'selector': selector, 'text': text}, 'success')
             self._send_event({'type': 'log', 'message': f'Typed text into {selector}'})
             self._send_event({'type': 'step', 'name': 'TYPE', 'args': f'{selector} | {text}', 'status': 'done'})
             return f'Typed into {selector}'
         except Exception as exc:
             message = f'Type failed on "{selector}": {exc}'
+            self._log_action_result('type', {'selector': selector, 'text': text}, 'error', str(exc))
             self.mcp_context.add_error(message, {'selector': selector, 'text': text})
             self._send_event({'type': 'error', 'message': message})
             return message
@@ -197,11 +217,13 @@ class RPAController:
                 value = field.get('value', '')
                 self._fill_form_field(selector, value)
                 time.sleep(random.uniform(0.3, 0.7))  # Pause between fields
+            self._log_action_result('fill_form', {'fields': fields}, 'success')
             self._send_event({'type': 'log', 'message': f'Filled form with {len(fields)} fields'})
             self._send_event({'type': 'step', 'name': 'FILL_FORM', 'args': f'{len(fields)} fields', 'status': 'done'})
             return f'Filled form with {len(fields)} fields'
         except Exception as exc:
             message = f'Fill form failed: {exc}'
+            self._log_action_result('fill_form', {'fields': fields}, 'error', str(exc))
             self.mcp_context.add_error(message, {'fields': fields})
             self._send_event({'type': 'error', 'message': message})
             return message

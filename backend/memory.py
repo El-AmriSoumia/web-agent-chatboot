@@ -17,6 +17,7 @@ def _default_data() -> Dict[str, Any]:
         'sessions': [],
         'conversation': [],
         'active_session': None,
+        'active_sessions': {},
     }
 
 
@@ -126,6 +127,8 @@ def _ensure_schema(data: Dict[str, Any]) -> Dict[str, Any]:
         data['conversation'] = []
     if 'active_session' not in data:
         data['active_session'] = None
+    if 'active_sessions' not in data or not isinstance(data['active_sessions'], dict):
+        data['active_sessions'] = {}
 
     active = data.get('active_session')
     if active is None and data.get('conversation'):
@@ -149,6 +152,34 @@ def _ensure_schema(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
+def _namespace_key(namespace: Optional[str] = None) -> str:
+    return _normalize_text(namespace or 'default') or 'default'
+
+
+def _get_active(data: Dict[str, Any], namespace: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    key = _namespace_key(namespace)
+    if key == 'default':
+        return data.get('active_session')
+    return data.get('active_sessions', {}).get(key)
+
+
+def _set_active(data: Dict[str, Any], active: Optional[Dict[str, Any]], namespace: Optional[str] = None) -> None:
+    key = _namespace_key(namespace)
+    if key == 'default':
+        data['active_session'] = active
+    else:
+        data.setdefault('active_sessions', {})
+        if active is None:
+            data['active_sessions'].pop(key, None)
+        else:
+            data['active_sessions'][key] = active
+
+
+def _set_conversation_snapshot(data: Dict[str, Any], active: Optional[Dict[str, Any]], namespace: Optional[str] = None) -> None:
+    if _namespace_key(namespace) == 'default':
+        data['conversation'] = (active or {}).get('messages', [])[-MAX_CONVERSATION_MESSAGES:]
+
+
 def _load_raw() -> Dict[str, Any]:
     if not os.path.exists(MEMORY_FILE):
         return _default_data()
@@ -168,10 +199,10 @@ def _save_raw(data: Dict[str, Any]) -> None:
         pass
 
 
-def _archive_active_session(data: Dict[str, Any], reason: str = 'archived') -> None:
-    active = data.get('active_session')
+def _archive_active_session(data: Dict[str, Any], reason: str = 'archived', namespace: Optional[str] = None) -> None:
+    active = _get_active(data, namespace)
     if not active:
-        data['conversation'] = []
+        _set_conversation_snapshot(data, None, namespace)
         return
 
     active['status'] = reason
@@ -183,44 +214,55 @@ def _archive_active_session(data: Dict[str, Any], reason: str = 'archived') -> N
     )
     data['sessions'].append(active)
     data['sessions'] = data['sessions'][-MAX_SESSIONS:]
-    data['active_session'] = None
-    data['conversation'] = []
+    _set_active(data, None, namespace)
+    _set_conversation_snapshot(data, None, namespace)
 
 
-def ensure_topic_session(task: str, force_new: bool = False) -> Dict[str, Any]:
+def ensure_topic_session(
+    task: str,
+    force_new: bool = False,
+    namespace: Optional[str] = None,
+    topic: Optional[str] = None,
+    allow_topic_switch: bool = True,
+) -> Dict[str, Any]:
     data = _load_raw()
-    active = data.get('active_session')
+    active = _get_active(data, namespace)
 
-    if force_new or _is_new_topic(task, active):
-        _archive_active_session(data, reason='topic_switched')
+    if force_new or (allow_topic_switch and _is_new_topic(task, active)):
+        _archive_active_session(data, reason='topic_switched', namespace=namespace)
         active = None
 
     if not active:
-        active = _make_session(topic=task, initial_task=task)
-        data['active_session'] = active
+        active = _make_session(topic=topic or task, initial_task=task)
+        active['namespace'] = _namespace_key(namespace)
+        _set_active(data, active, namespace)
 
     active['updated_at'] = _utc_now()
     active['status'] = 'active'
-    if task and not active.get('messages'):
+    if topic:
+        active['topic'] = _normalize_text(topic)
+        active['summary'] = _build_summary(active.get('messages', []), active['topic'], task)
+    elif task and not active.get('messages'):
         active['topic'] = _normalize_text(task)
         active['summary'] = active['topic']
 
-    data['conversation'] = active.get('messages', [])[-MAX_CONVERSATION_MESSAGES:]
+    _set_conversation_snapshot(data, active, namespace)
     _save_raw(data)
     return active
 
 
-def get_active_session() -> Optional[Dict[str, Any]]:
+def get_active_session(namespace: Optional[str] = None) -> Optional[Dict[str, Any]]:
     data = _load_raw()
-    return data.get('active_session')
+    return _get_active(data, namespace)
 
 
-def append_conversation(role: str, content: str, task: str = '') -> None:
+def append_conversation(role: str, content: str, task: str = '', namespace: Optional[str] = None) -> None:
     data = _load_raw()
-    active = data.get('active_session')
+    active = _get_active(data, namespace)
     if not active:
         active = _make_session(topic=task or content, initial_task=task or content)
-        data['active_session'] = active
+        active['namespace'] = _namespace_key(namespace)
+        _set_active(data, active, namespace)
 
     message = _session_message(role, content, task=task)
     active['messages'].append(message)
@@ -230,18 +272,18 @@ def append_conversation(role: str, content: str, task: str = '') -> None:
         active['topic'] = active.get('topic') or _normalize_text(task)
     active['summary'] = _build_summary(active['messages'], active.get('topic', ''), task)
 
-    data['conversation'] = active['messages'][-MAX_CONVERSATION_MESSAGES:]
+    _set_conversation_snapshot(data, active, namespace)
     _save_raw(data)
 
 
-def get_conversation_history(n: int = 20, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_conversation_history(n: int = 20, session_id: Optional[str] = None, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
     data = _load_raw()
     if session_id:
         sessions = data.get('sessions', [])
         target = next((session for session in sessions if session.get('id') == session_id), None)
         messages = (target or {}).get('messages', [])
     else:
-        active = data.get('active_session') or {}
+        active = _get_active(data, namespace) or {}
         messages = active.get('messages', [])
 
     if n == 0:
@@ -249,9 +291,9 @@ def get_conversation_history(n: int = 20, session_id: Optional[str] = None) -> L
     return messages[-n:]
 
 
-def archive_and_reset() -> None:
+def archive_and_reset(namespace: Optional[str] = None) -> None:
     data = _load_raw()
-    _archive_active_session(data, reason='reset')
+    _archive_active_session(data, reason='reset', namespace=namespace)
     _save_raw(data)
 
 
@@ -272,12 +314,14 @@ def save_session(
     result_summary: str,
     extracted_data: Dict = None,
     status: str = 'done',
+    namespace: Optional[str] = None,
 ) -> None:
     data = _load_raw()
-    active = data.get('active_session')
+    active = _get_active(data, namespace)
     if not active:
         active = _make_session(topic=task, initial_task=task)
-        data['active_session'] = active
+        active['namespace'] = _namespace_key(namespace)
+        _set_active(data, active, namespace)
 
     task_entry = {
         'timestamp': _utc_now(),
@@ -291,9 +335,9 @@ def save_session(
     active['task_history'] = active['task_history'][-MAX_SESSIONS:]
     active['updated_at'] = task_entry['timestamp']
     active['summary'] = _build_summary(active.get('messages', []), active.get('topic', ''), task)
-    data['conversation'] = active.get('messages', [])[-MAX_CONVERSATION_MESSAGES:]
+    _set_conversation_snapshot(data, active, namespace)
     _save_raw(data)
-    append_conversation('agent', f'Task completed: {result_summary}', task=task)
+    append_conversation('agent', f'Task completed: {result_summary}', task=task, namespace=namespace)
 
 
 def _session_snapshot(session: Dict[str, Any]) -> Dict[str, Any]:
@@ -311,17 +355,22 @@ def _session_snapshot(session: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def get_recent_sessions(n: int = 10, include_active: bool = False) -> List[Dict[str, Any]]:
+def get_recent_sessions(n: int = 10, include_active: bool = False, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
     data = _load_raw()
-    snapshots = [_session_snapshot(session) for session in data.get('sessions', [])]
-    if include_active and data.get('active_session'):
-        snapshots.append(_session_snapshot(data['active_session']))
+    key = _namespace_key(namespace)
+    sessions = data.get('sessions', [])
+    if namespace:
+        sessions = [session for session in sessions if session.get('namespace') == key]
+    snapshots = [_session_snapshot(session) for session in sessions]
+    active = _get_active(data, namespace)
+    if include_active and active:
+        snapshots.append(_session_snapshot(active))
     return snapshots[-n:]
 
 
-def get_errors_from_history(n_conv: int = 30) -> List[str]:
+def get_errors_from_history(n_conv: int = 30, namespace: Optional[str] = None) -> List[str]:
     errors = []
-    conv = get_conversation_history(n_conv)
+    conv = get_conversation_history(n_conv, namespace=namespace)
     for msg in conv:
         content = msg.get('content', '')
         role = msg.get('role', '')
@@ -332,9 +381,9 @@ def get_errors_from_history(n_conv: int = 30) -> List[str]:
     return errors
 
 
-def get_memory_context(current_task: str, n_sessions: int = 5, n_conv: int = 15) -> str:
+def get_memory_context(current_task: str, n_sessions: int = 5, n_conv: int = 15, namespace: Optional[str] = None) -> str:
     data = _load_raw()
-    active = data.get('active_session')
+    active = _get_active(data, namespace)
     lines = ['=== CONTEXT INSTRUCTION (PRIORITY) ===']
 
     if active:
@@ -347,14 +396,14 @@ def get_memory_context(current_task: str, n_sessions: int = 5, n_conv: int = 15)
                 lines.append(f'  {part}')
         lines.append('')
 
-    errors = get_errors_from_history(n_conv * 2)
+    errors = get_errors_from_history(n_conv * 2, namespace=namespace)
     if errors:
         lines.append('## PAST ERRORS TO AVOID REPEATING:')
         for e in errors[-5:]:
             lines.append(f'  - {e}')
         lines.append('')
 
-    sessions = get_recent_sessions(n_sessions, include_active=False)
+    sessions = get_recent_sessions(n_sessions, include_active=False, namespace=namespace)
     if sessions:
         lines.append('## PREVIOUS TOPIC SESSIONS:')
         for s in reversed(sessions):
@@ -367,7 +416,7 @@ def get_memory_context(current_task: str, n_sessions: int = 5, n_conv: int = 15)
                 lines.append(f'    => {result}')
         lines.append('')
 
-    conv = get_conversation_history(n_conv)
+    conv = get_conversation_history(n_conv, namespace=namespace)
     if conv:
         lines.append('## ACTIVE SESSION RECENT MESSAGES:')
         for msg in conv:

@@ -45,11 +45,16 @@ class MCPContext:
             self.task_state['status'] = status
 
     def add_action(self, action: str, details: Dict[str, Any]) -> None:
-        self.action_history.append({
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+        timestamp = datetime.utcnow().isoformat() + 'Z'
+        entry: Dict[str, Any] = {
+            'timestamp': timestamp,
             'action': action,
             'details': details,
-        })
+        }
+        for key in ('selector', 'url', 'status', 'error'):
+            if key in details:
+                entry[key] = details[key]
+        self.action_history.append(entry)
 
     def add_result(self, name: str, value: Any) -> None:
         self.intermediate_results[name] = value

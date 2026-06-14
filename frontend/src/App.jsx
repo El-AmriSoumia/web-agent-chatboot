@@ -170,7 +170,182 @@ function mapStoredMessage(message) {
   return { id: message.id, type: 'question', text: message.content }
 }
 
-function SessionSidebar({ sessions, activeSessionId, onSelect, onNew, onDelete, loading, user }) {
+function buildAgentIntro(agent) {
+  if (!agent) return null
+  const context = `${agent.description || ''}\n${agent.systemContext || ''}`.toLowerCase()
+  const fields = []
+  if (/(nom|name)/i.test(context)) fields.push('nom')
+  if (/(domaine|domain|travail|work|job|metier|specialite|demain|demaine)/i.test(context)) fields.push('domaine de travail')
+  if (/(email|mail|courriel)/i.test(context)) fields.push('email')
+  if (/(username|utilisateur|etulisateur|user|profil|profile)/i.test(context)) fields.push('profil')
+  const requestedFields = [...new Set(fields)].slice(0, 5)
+  const fieldsText = requestedFields.length ? ` Le rapport doit contenir: ${requestedFields.join(', ')}.` : ''
+  let expectedInput = 'Ecris ta demande en une phrase simple.'
+  let example = 'Exemple: analyse ce sujet'
+
+  if (/(github|git hub|gitgub|github\.com)/i.test(context) && /(utilisateur|etulisateur|user|profil|profile|chercheur|researcher)/i.test(context)) {
+    expectedInput = 'Donne le nom, mot-cle ou type de profils GitHub a chercher.' + fieldsText
+    example = 'Exemple: hamza developpeur python'
+  } else if (/(linkedin|linked ?in)/i.test(context) && /(profil|profile|utilisateur|user|candidat)/i.test(context)) {
+    expectedInput = 'Donne le nom, poste ou type de profils LinkedIn a chercher.' + fieldsText
+    example = 'Exemple: product manager Casablanca'
+  } else
+  if (/(produit|product|concurrent|concurrence|competitor|march[eé]|prix|amazon|alibaba|aliexpress)/i.test(context)) {
+    expectedInput = 'Donne seulement le nom du produit. Je vais chercher les concurrents, sources, liens et prix visibles.'
+    example = 'Exemple: pipas'
+  } else if (/(cv|rh|recrut|candidat|resume|emploi|job)/i.test(context)) {
+    expectedInput = 'Colle le CV, le profil ou le poste a analyser. Ajoute le critere important si tu en as un.'
+    example = 'Exemple: analyse ce CV pour un poste frontend'
+  } else if (/(support|client|ticket|bug|probleme|problème|incident)/i.test(context)) {
+    expectedInput = 'Explique le probleme, le contexte et le resultat attendu. Je vais cadrer la reponse.'
+    example = 'Exemple: le client ne peut pas se connecter'
+  } else if (/(rapport|analyse|research|recherche|veille|comparaison|audit)/i.test(context)) {
+    expectedInput = 'Donne le sujet a analyser. Je vais suivre la structure demandee dans cet agent.'
+    example = 'Exemple: analyse ce marche'
+  }
+
+  const framingLines = (agent.systemContext || '')
+    .split(/\r?\n/)
+    .map(line => line.replace(/^[-*#\d.)\s]+/, '').trim())
+    .filter(line => line.length > 12 && /(demande|question|fourni|donne|si |format|rapport|doit|règle|regle)/i.test(line))
+    .slice(0, 3)
+
+  return {
+    id: `agent-intro-${agent.id}`,
+    type: 'agent_intro',
+    title: agent.name || 'Agent contextuel',
+    description: agent.description || '',
+    expectedInput,
+    example,
+    framingLines,
+  }
+}
+
+function AgentPanel({ agents, selectedAgentId, onSelectAgent, onSaveAgent, onDeleteAgent, saving }) {
+  const emptyForm = { name: '', description: '', systemContext: '' }
+  const [expanded, setExpanded] = useState(false)
+  const [editingId, setEditingId] = useState('')
+  const [form, setForm] = useState(emptyForm)
+
+  const selected = agents.find(agent => agent.id === selectedAgentId)
+
+  const beginCreate = () => {
+    setEditingId('')
+    setForm(emptyForm)
+    setExpanded(true)
+  }
+
+  const beginEdit = (agent) => {
+    setEditingId(agent.id)
+    setForm({
+      name: agent.name || '',
+      description: agent.description || '',
+      systemContext: agent.systemContext || '',
+    })
+    setExpanded(true)
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    const saved = await onSaveAgent(editingId, form)
+    if (saved) {
+      setForm(emptyForm)
+      setEditingId('')
+      setExpanded(false)
+    }
+  }
+
+  return (
+    <div className="border-b border-white/10">
+      <div className="p-3 flex items-center gap-2">
+        <span className="material-symbols-outlined text-[#f2ca50] text-sm">psychology</span>
+        <p className="text-[10px] uppercase tracking-widest text-[#f2ca50] font-bold">Agents</p>
+        <button
+          onClick={beginCreate}
+          className="ml-auto text-[9px] uppercase tracking-widest text-[#4ade80] border border-[#4ade80]/25 px-2 py-1 rounded hover:bg-[#4ade80]/10"
+        >
+          Creer
+        </button>
+      </div>
+
+      <div className="px-3 pb-3 space-y-2">
+        <select
+          value={selectedAgentId || ''}
+          onChange={event => onSelectAgent(event.target.value)}
+          className="w-full bg-black/40 border border-white/10 rounded px-2 py-2 text-[10px] uppercase tracking-widest text-white/75 focus:outline-none"
+        >
+          <option value="">Agent par defaut</option>
+          {agents.map(agent => (
+            <option key={agent.id} value={agent.id}>{agent.name}</option>
+          ))}
+        </select>
+
+        {selected && (
+          <div className="rounded border border-white/10 bg-white/[0.03] p-2">
+            <p className="text-[10px] font-bold text-white/80 truncate">{selected.name}</p>
+            <p className="text-[9px] text-white/45 line-clamp-2 mt-1">{selected.description}</p>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => beginEdit(selected)} className="text-[8px] uppercase tracking-widest text-[#60a5fa] border border-[#60a5fa]/25 px-2 py-1 rounded hover:bg-[#60a5fa]/10">
+                Modifier
+              </button>
+              <button onClick={() => onDeleteAgent(selected.id)} className="text-[8px] uppercase tracking-widest text-red-300 border border-red-400/25 px-2 py-1 rounded hover:bg-red-500/10">
+                Supprimer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {expanded && (
+          <form onSubmit={submit} className="rounded-lg border border-[#f2ca50]/20 bg-black/35 p-3 space-y-2">
+            <input
+              value={form.name}
+              onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded px-2 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none"
+              placeholder="Nom de l'agent"
+            />
+            <input
+              value={form.description}
+              onChange={event => setForm(prev => ({ ...prev, description: event.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded px-2 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none"
+              placeholder="Description courte"
+            />
+            <textarea
+              value={form.systemContext}
+              onChange={event => setForm(prev => ({ ...prev, systemContext: event.target.value }))}
+              rows={5}
+              className="w-full bg-white/5 border border-white/10 rounded px-2 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none resize-none"
+              placeholder="Contexte systeme de cet agent..."
+            />
+            <div className="flex gap-2">
+              <button type="submit" disabled={saving} className="flex-1 bg-[#f2ca50] text-[#3d2f00] font-black text-[9px] uppercase tracking-widest py-2 rounded disabled:opacity-40">
+                {saving ? 'Sauvegarde...' : editingId ? 'Mettre a jour' : 'Ajouter'}
+              </button>
+              <button type="button" onClick={() => { setExpanded(false); setEditingId(''); setForm(emptyForm) }} className="px-3 border border-white/15 text-white/55 text-[9px] uppercase tracking-widest rounded hover:bg-white/10">
+                Annuler
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SessionSidebar({
+  sessions,
+  activeSessionId,
+  onSelect,
+  onNew,
+  onDelete,
+  loading,
+  user,
+  agents,
+  selectedAgentId,
+  onSelectAgent,
+  onSaveAgent,
+  onDeleteAgent,
+  agentsSaving,
+}) {
   return (
     <aside className="hidden lg:flex flex-col w-72 bg-black/35 backdrop-blur-md border-r border-white/10 relative z-10">
       <div className="p-3 border-b border-white/10">
@@ -180,6 +355,14 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onNew, onDelete, 
           <p className="text-xs font-bold text-white/80 truncate">{user?.username || user?.email}</p>
         </div>
       </div>
+      <AgentPanel
+        agents={agents}
+        selectedAgentId={selectedAgentId}
+        onSelectAgent={onSelectAgent}
+        onSaveAgent={onSaveAgent}
+        onDeleteAgent={onDeleteAgent}
+        saving={agentsSaving}
+      />
       <div className="p-3 border-b border-white/10 flex items-center gap-2">
         <span className="material-symbols-outlined text-[#f2ca50] text-sm">forum</span>
         <p className="text-[10px] uppercase tracking-widest text-[#f2ca50] font-bold">Sujets</p>
@@ -208,6 +391,11 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onNew, onDelete, 
               <p className="text-[10px] text-white/45 line-clamp-2 min-h-[2rem]">
                 {session.lastMessage || 'Conversation sauvegardee'}
               </p>
+              {session.agentName && (
+                <p className="text-[9px] uppercase tracking-widest text-[#f2ca50]/60 mt-2 truncate">
+                  Agent: {session.agentName}
+                </p>
+              )}
               <p className="text-[9px] uppercase tracking-widest text-white/30 mt-2">
                 {formatSessionTime(session.lastMessageAt || session.startedAt)}
               </p>
@@ -367,6 +555,30 @@ function ActionableFeedbackInput({ question, onSubmit, onSkip }) {
 }
 
 function AgentMessage({ msg, onRerun }) {
+  if (msg.type === 'agent_intro') {
+    return (
+      <div className="bg-black/45 backdrop-blur-sm border border-[#60a5fa]/25 rounded-xl p-5 my-3">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="material-symbols-outlined text-[#60a5fa] text-base">psychology</span>
+          <p className="text-[10px] text-[#60a5fa] font-bold uppercase tracking-widest">{msg.title}</p>
+        </div>
+        {msg.description && <p className="text-sm text-white/75 mb-3">{msg.description}</p>}
+        <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+          <p className="text-[9px] text-white/40 uppercase tracking-widest mb-1">Pour commencer</p>
+          <p className="text-sm text-white/85">{msg.expectedInput}</p>
+          <p className="text-xs text-[#f2ca50]/80 mt-2">{msg.example}</p>
+        </div>
+        {msg.framingLines?.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[9px] text-white/40 uppercase tracking-widest mb-2">Cadre de cet agent</p>
+            <ul className="space-y-1 text-xs text-white/65">
+              {msg.framingLines.map((line, idx) => <li key={idx}>- {line}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
   if (msg.type === 'action') {
     return (
       <div className="flex items-start gap-3 py-2">
@@ -381,6 +593,16 @@ function AgentMessage({ msg, onRerun }) {
     )
   }
   if (msg.type === 'result') {
+    if (msg.data?.report) {
+      return (
+        <div className="bg-black/40 backdrop-blur-sm border border-[#f2ca50]/20 rounded-xl p-5 my-3">
+          <p className="text-[10px] text-[#f2ca50] font-bold uppercase tracking-widest mb-3">Resultat</p>
+          <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed text-white/85 font-sans">
+            {msg.data.report}
+          </pre>
+        </div>
+      )
+    }
     return (
       <div className="bg-black/40 backdrop-blur-sm border border-[#f2ca50]/20 rounded-xl p-5 my-3">
         <p className="text-[10px] text-[#f2ca50] font-bold uppercase tracking-widest mb-3">✓ Résultat</p>
@@ -423,6 +645,20 @@ function AgentMessage({ msg, onRerun }) {
       </div>
     )
   }
+  if (msg.type === 'execution_time') {
+    return (
+      <div className="flex justify-center my-3">
+        <div className="bg-[#4ade80]/10 backdrop-blur-sm border border-[#4ade80]/30 rounded-lg px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#4ade80] text-base">schedule</span>
+            <p className="text-[10px] uppercase tracking-widest text-[#4ade80] font-bold">
+              Temps d'exécution: {msg.elapsed}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
   // screenshots are intentionally NOT rendered in the conversation zone
   return null
 }
@@ -458,6 +694,10 @@ export default function App() {
   const [safetyMsg, setSafetyMsg] = useState('')
   const [staleBrowser, setStaleBrowser] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
+  const [agents, setAgents] = useState([])
+  const [selectedAgentId, setSelectedAgentId] = useState('')
+  const [agentsSaving, setAgentsSaving] = useState(false)
+  const selectedAgent = agents.find(agent => agent.id === selectedAgentId)
 
   const scrollRef = useRef(null)
   const cmdRef = useRef(null)
@@ -465,6 +705,12 @@ export default function App() {
   const streamActiveRef = useRef(false)
 
   const authHeaders = auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages])
 
   const handleAuthenticated = (nextAuth) => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextAuth))
@@ -481,22 +727,29 @@ export default function App() {
     setBackendAvailable(false)
     setMessages([])
     setSessions([])
+    setAgents([])
+    setSelectedAgentId('')
     setActiveSessionId('')
     setCommand('')
     setAgentStatus('idle')
   }
 
-  const refreshSessions = async (preferredSessionId = activeSessionId) => {
+  const refreshSessions = async (preferredSessionId = activeSessionId, agentFilter = selectedAgentId) => {
     if (!auth?.token || !backendUrl) return
     setSessionsLoading(true)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 12000)
     try {
-      const response = await fetch(`${backendUrl}/sessions`, { headers: authHeaders })
+      const response = await fetch(`${backendUrl}/sessions`, { headers: authHeaders, signal: ctrl.signal })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
+      const scopedSessions = (data.sessions || []).filter(session => (
+        agentFilter ? session.agentId === agentFilter : !session.agentId
+      ))
       // Deduplicate by task name — keep only the most recent per task
       const seen = new Set()
-      const nextSessions = (data.sessions || []).filter(s => {
-        const key = (s.task || '').trim().toLowerCase()
+      const nextSessions = scopedSessions.filter(s => {
+        const key = `${s.agentId || 'default'}:${(s.task || '').trim().toLowerCase()}`
         if (seen.has(key)) return false
         seen.add(key)
         return true
@@ -513,13 +766,110 @@ export default function App() {
     } catch (_) {
       setSessions([])
     } finally {
+      clearTimeout(timer)
       setSessionsLoading(false)
+    }
+  }
+
+  const selectContextualAgent = async (agentId) => {
+    if (agentStatus === 'executing' || agentStatus === 'waiting') return
+    const nextAgent = agents.find(agent => agent.id === agentId)
+    setSelectedAgentId(agentId)
+    setMessages(nextAgent ? [buildAgentIntro(nextAgent)] : [])
+    setActiveSessionId('')
+    setActiveTask('')
+    setCurrentUrl('')
+    setCurrentTopic('')
+    setSessionSummary('')
+    setToolsUsed([])
+    setLastScreenshot(null)
+    setScreenshotHistory([])
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+    await refreshSessions('', agentId)
+  }
+
+  const refreshAgents = async () => {
+    if (!auth?.token || !backendUrl) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 12000)
+    try {
+      const response = await fetch(`${backendUrl}/agents`, { headers: authHeaders, signal: ctrl.signal })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      setAgents(data.agents || [])
+      if (selectedAgentId && !(data.agents || []).some(agent => agent.id === selectedAgentId)) {
+        setSelectedAgentId('')
+      }
+    } catch (_) {
+      setAgents([])
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  const saveContextualAgent = async (agentId, form) => {
+    if (!auth?.token || !backendUrl) return false
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      systemContext: form.systemContext.trim(),
+    }
+    if (!payload.name || !payload.description || !payload.systemContext) {
+      alert('Nom, description et contexte sont obligatoires.')
+      return false
+    }
+    setAgentsSaving(true)
+    try {
+      const response = await fetch(`${backendUrl}/agents${agentId ? `/${agentId}` : ''}`, {
+        method: agentId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
+      await refreshAgents()
+      await selectContextualAgent(data.agent?.id || agentId || '')
+      return true
+    } catch (err) {
+      alert(`Erreur agent: ${err.message}`)
+      return false
+    } finally {
+      setAgentsSaving(false)
+    }
+  }
+
+  const deleteContextualAgent = async (agentId) => {
+    if (!auth?.token || !backendUrl || !agentId) return
+    if (!confirm('Desactiver cet agent contextuel ? Les anciennes sessions restent lisibles.')) return
+    try {
+      const response = await fetch(`${backendUrl}/agents/${agentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (selectedAgentId === agentId) await selectContextualAgent('')
+      await refreshAgents()
+      await refreshSessions()
+    } catch (err) {
+      alert(`Erreur lors de la suppression: ${err.message}`)
     }
   }
 
   const deleteSession = async (sessionId) => {
     if (!auth?.token || !backendUrl || !sessionId) return
     if (!confirm('Supprimer cette session et tous ses messages ?')) return
+    
+    // If deleting active session while agent is running, abort it first
+    if (sessionId === activeSessionId && (agentStatus === 'executing' || agentStatus === 'waiting')) {
+      if (controllerRef.current) {
+        controllerRef.current.abort()
+      }
+      await fetch(`${backendUrl}/abort`, {
+        method: 'POST',
+        headers: authHeaders
+      }).catch(() => {})
+    }
+    
     try {
       const response = await fetch(`${backendUrl}/sessions/${sessionId}`, {
         method: 'DELETE',
@@ -535,6 +885,9 @@ export default function App() {
         setScreenshotHistory([])
         setCurrentUrl('')
         setCurrentTopic('')
+        setAgentStatus('idle')
+        setShowFeedback(false)
+        setShowSafety(false)
         localStorage.removeItem(SESSION_STORAGE_KEY)
       }
       
@@ -547,15 +900,18 @@ export default function App() {
 
   const loadSession = async (sessionId, refreshList = true) => {
     if (!auth?.token || !backendUrl || !sessionId) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 12000)
     try {
-      const response = await fetch(`${backendUrl}/sessions/${sessionId}`, { headers: authHeaders })
+      const response = await fetch(`${backendUrl}/sessions/${sessionId}`, { headers: authHeaders, signal: ctrl.signal })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
       setActiveSessionId(sessionId)
       localStorage.setItem(SESSION_STORAGE_KEY, sessionId)
       setActiveTask(data.session?.task || '')
+      setSelectedAgentId(data.session?.agentId || '')
       
-      const screenshotsResponse = await fetch(`${backendUrl}/sessions/${sessionId}/screenshots`, { headers: authHeaders })
+      const screenshotsResponse = await fetch(`${backendUrl}/sessions/${sessionId}/screenshots`, { headers: authHeaders, signal: ctrl.signal })
       if (screenshotsResponse.ok) {
         const screenshotsData = await screenshotsResponse.json()
         const screenshots = screenshotsData.screenshots || []
@@ -581,6 +937,8 @@ export default function App() {
     } catch (_) {
       setActiveSessionId('')
       localStorage.removeItem(SESSION_STORAGE_KEY)
+    } finally {
+      clearTimeout(timer)
     }
   }
 
@@ -588,7 +946,7 @@ export default function App() {
     if (agentStatus === 'executing') {
       return
     }
-    setMessages([])
+    setMessages(selectedAgent ? [buildAgentIntro(selectedAgent)] : [])
     setCurrentUrl('')
     setCurrentTopic('')
     setSessionSummary('')
@@ -630,21 +988,26 @@ export default function App() {
   useEffect(() => {
     if (auth?.token && backendUrl) {
       refreshSessions(localStorage.getItem(SESSION_STORAGE_KEY) || activeSessionId)
+      refreshAgents()
     }
   }, [auth?.token, backendUrl])
 
   // Restore last session on load
   useEffect(() => {
     if (!backendUrl || !backendAvailable) return
-    const token = localStorage.getItem('gsam_token')
+    const token = auth?.token
     if (!token) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 12000)
     fetch(`${backendUrl}/session/restore`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      signal: ctrl.signal,
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data?.session) return
         const { lastUrl, lastScreenshot, task } = data.session
+        setSelectedAgentId(data.session?.agentId || '')
         if (lastUrl) setCurrentUrl(lastUrl)
         if (lastScreenshot) setLastScreenshot(`data:image/png;base64,${lastScreenshot}`)
         if (data.messages?.length > 0) {
@@ -661,7 +1024,8 @@ export default function App() {
         }
       })
       .catch(() => {})
-  }, [backendUrl, backendAvailable])
+      .finally(() => clearTimeout(timer))
+  }, [backendUrl, backendAvailable, auth?.token])
 
   const addMsg = (msg) => setMessages(prev => [...prev, { ...msg, id: Date.now() + Math.random() }])
 
@@ -715,6 +1079,14 @@ export default function App() {
         addMsg({ type: 'action', name: 'ERROR', args: event.message, status: 'error' })
         setAgentStatus('error')
         break
+      case 'execution_time':
+        console.log('Received execution_time event:', event)
+        addMsg({
+          type: 'execution_time',
+          elapsed: event.elapsed_formatted || `${event.elapsed_seconds}s`,
+          seconds: event.elapsed_seconds
+        })
+        break
       case 'done':
         setAgentStatus(prev => prev === 'waiting' ? 'waiting' : 'complete')
         break
@@ -743,7 +1115,7 @@ export default function App() {
     }
 
     const continuingSessionId = activeSessionId
-    if (!continuingSessionId) setMessages([])
+    if (!continuingSessionId) setMessages(selectedAgent ? [buildAgentIntro(selectedAgent)] : [])
     setCurrentUrl('')
     setCurrentTopic('')
     setSessionSummary('')
@@ -761,6 +1133,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           task,
+          agent_id: continuingSessionId ? undefined : (selectedAgentId || undefined),
           session_id: continuingSessionId || undefined,
           stale_browser: staleBrowser,
           skip_anti_bot: false,
@@ -880,6 +1253,12 @@ export default function App() {
         onDelete={deleteSession}
         loading={sessionsLoading}
         user={auth.user}
+        agents={agents}
+        selectedAgentId={selectedAgentId}
+        onSelectAgent={selectContextualAgent}
+        onSaveAgent={saveContextualAgent}
+        onDeleteAgent={deleteContextualAgent}
+        agentsSaving={agentsSaving}
       />
 
       {/* ── MAIN PANEL ── */}
@@ -955,6 +1334,7 @@ export default function App() {
               placeholder={
                 agentStatus === 'waiting' ? 'Répondez dans le modal ci-dessus...' :
                 streamActiveRef.current ? 'Nouvelle instruction (ou "stop" pour arrêter)...' :
+                selectedAgent ? buildAgentIntro(selectedAgent)?.expectedInput :
                 'Entrez une mission...'
               }
             />
